@@ -2,12 +2,19 @@
 
 import { useRef, useState } from "react";
 import {
+  decryptDumpObject,
+  encryptDumpObject,
+  isEncryptedDumpEnvelope,
+} from "@/lib/crypto/dump-encrypt";
+import {
   clearAllLocalChatData,
   exportLocalChatDump,
   importLocalChatDump,
 } from "@/lib/chat/local-db";
 
-export function EmergencyLocalData() {
+type Props = { variant?: "page" | "modal" };
+
+export function EmergencyLocalData({ variant = "page" }: Props) {
   const [msg, setMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -24,8 +31,22 @@ export function EmergencyLocalData() {
   }
 
   async function onExport() {
+    const pw = window.prompt(
+      "Задайте пароль для шифрования дампа (не меньше 8 символов). Без него восстановить данные будет нельзя."
+    );
+    if (!pw || pw.length < 8) {
+      setMsg(pw ? "Пароль слишком короткий." : "Экспорт отменён.");
+      return;
+    }
+    const pw2 = window.prompt("Повторите пароль:");
+    if (pw !== pw2) {
+      setMsg("Пароли не совпали.");
+      return;
+    }
+    setMsg(null);
     const dump = await exportLocalChatDump();
-    const blob = new Blob([JSON.stringify(dump, null, 0)], {
+    const encrypted = await encryptDumpObject(dump, pw);
+    const blob = new Blob([JSON.stringify(encrypted, null, 0)], {
       type: "application/json",
     });
     const a = document.createElement("a");
@@ -33,7 +54,7 @@ export function EmergencyLocalData() {
     a.download = `say-hello-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
-    setMsg("Файл дампа сохранён.");
+    setMsg("Зашифрованный файл сохранён. Тексты в нём нечитаемы без пароля и импорта в приложение.");
   }
 
   async function onImportFile(f: File | null) {
@@ -41,7 +62,17 @@ export function EmergencyLocalData() {
     setMsg(null);
     try {
       const text = await f.text();
-      const data = JSON.parse(text);
+      const raw = JSON.parse(text) as unknown;
+      let data: unknown = raw;
+      if (isEncryptedDumpEnvelope(raw)) {
+        const pw = window.prompt("Пароль от зашифрованного дампа:");
+        if (!pw) {
+          setMsg("Импорт отменён.");
+          if (fileRef.current) fileRef.current.value = "";
+          return;
+        }
+        data = await decryptDumpObject(raw, pw);
+      }
       const mode: "merge" | "replace" = confirm(
         "Заменить все текущие локальные данные содержимым файла? «Отмена» — только объединить (контакты и сообщения добавятся к существующим)."
       )
@@ -49,20 +80,44 @@ export function EmergencyLocalData() {
         : "merge";
       await importLocalChatDump(data, mode);
       setMsg("Импорт выполнен. Обновите страницу.");
-    } catch {
-      setMsg("Не удалось прочитать файл.");
+    } catch (e) {
+      setMsg(
+        e instanceof Error ? e.message : "Не удалось прочитать или расшифровать файл."
+      );
     }
     if (fileRef.current) fileRef.current.value = "";
   }
 
+  const shell =
+    variant === "modal"
+      ? "mt-0 rounded-lg border-0 bg-transparent p-0"
+      : "mt-3 rounded-lg border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-3";
+
   return (
-    <section className="mt-8 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-5">
-      <h2 className="text-[14px] font-medium text-[var(--tg-text)]">Локальные данные</h2>
-      <p className="mt-2 text-[13px] leading-relaxed text-[var(--tg-text-secondary)]">
+    <section className={shell}>
+      {variant === "page" && (
+        <h2 className="text-[13px] font-medium text-[var(--tg-text)]">Локальные данные</h2>
+      )}
+      <p
+        className={`text-[12px] leading-snug text-[var(--tg-text-secondary)] ${variant === "page" ? "mt-1.5" : "mt-0"}`}
+      >
         Резервная копия и очистка относятся только к этому браузеру (IndexedDB). Серверные группы и
         аккаунт не затрагиваются.
       </p>
-      <div className="mt-4 flex flex-wrap gap-2">
+      <p className="mt-2 text-[12px] leading-snug text-[var(--tg-text-secondary)]">
+        <span className="font-medium text-[var(--tg-text)]">Что в дампе:</span> контакты (коды, ники,
+        локальные подписи), все личные сообщения из IndexedDB, кэш групповых сообщений для офлайна и{" "}
+        <span className="font-medium text-[var(--tg-text)]">приватный ключ E2E</span> (если был создан)
+        вместе с публичным — то есть всё, что нужно для расшифровки сохранённой переписки на этом
+        устройстве.
+      </p>
+      <p className="mt-2 text-[12px] leading-snug text-[var(--tg-text-secondary)]">
+        <span className="font-medium text-[var(--tg-text)]">Шифрование:</span> при экспорте задаётся
+        пароль; в файле хранится только соль и шифротекст (AES-GCM). Переписка и ключи становятся
+        читаемыми только после импорта в этом приложении с тем же паролем. Старые незашифрованные дампы
+        (v2) по-прежнему можно импортировать.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => void onExport()}

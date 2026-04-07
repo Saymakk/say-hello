@@ -2,15 +2,20 @@
 
 import { startRegistration } from "@simplewebauthn/browser";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Props = {
   initialPasskeyCount: number;
+  variant?: "page" | "modal";
 };
 
-export function PasskeySettings({ initialPasskeyCount }: Props) {
+export function PasskeySettings({ initialPasskeyCount, variant = "page" }: Props) {
   const router = useRouter();
   const [count, setCount] = useState(initialPasskeyCount);
+
+  useEffect(() => {
+    setCount(initialPasskeyCount);
+  }, [initialPasskeyCount]);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -53,12 +58,21 @@ export function PasskeySettings({ initialPasskeyCount }: Props) {
     setBusy(false);
   }
 
+  const shell =
+    variant === "modal"
+      ? "mt-0 rounded-lg border-0 bg-transparent p-0"
+      : "mt-3 rounded-lg border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-3";
+
   return (
-    <div className="mt-6 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-5">
-      <h2 className="text-[14px] font-medium text-[var(--tg-text)]">
-        Вход по Face ID / отпечатку
-      </h2>
-      <p className="mt-1 text-[12px] leading-snug text-[var(--tg-text-secondary)]">
+    <div className={shell}>
+      {variant === "page" && (
+        <h2 className="text-[14px] font-medium text-[var(--tg-text)]">
+          Вход по Face ID / отпечатку
+        </h2>
+      )}
+      <p
+        className={`text-[12px] leading-snug text-[var(--tg-text-secondary)] ${variant === "page" ? "mt-1" : "mt-0"}`}
+      >
         Работает в поддерживаемых браузерах (Safari, Chrome). На этом устройстве добавьте ключ —
         затем на экране входа можно подтвердить личность без пароля.
       </p>

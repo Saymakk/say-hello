@@ -5,9 +5,11 @@ type SignalPayload =
   | { kind: "answer"; sdp: RTCSessionDescriptionInit }
   | { kind: "ice"; candidate: RTCIceCandidateInit };
 
+export type DmReplyWire = { id: string; s: string };
+
 export type DmWirePayload =
-  | { v: 1; t: "text"; b: string }
-  | { v: 1; t: "img"; b: string };
+  | { v: 1; t: "text"; b: string; r?: DmReplyWire }
+  | { v: 1; t: "img"; b: string; r?: DmReplyWire };
 
 export type DmIncomingPayload = DmWirePayload | { legacyText: string };
 
@@ -98,7 +100,18 @@ export class DirectP2P {
           (j as { t?: string }).t === "text" &&
           typeof (j as { b?: string }).b === "string"
         ) {
-          this.onPayload({ v: 1, t: "text", b: (j as { b: string }).b });
+          const jo = j as { b: string; r?: { id?: string; s?: string } };
+          const r =
+            jo.r &&
+            typeof jo.r.id === "string" &&
+            typeof jo.r.s === "string"
+              ? { id: jo.r.id, s: jo.r.s }
+              : undefined;
+          this.onPayload(
+            r
+              ? { v: 1, t: "text", b: jo.b, r }
+              : { v: 1, t: "text", b: jo.b }
+          );
           return;
         }
         if (
@@ -108,7 +121,18 @@ export class DirectP2P {
           (j as { t?: string }).t === "img" &&
           typeof (j as { b?: string }).b === "string"
         ) {
-          this.onPayload({ v: 1, t: "img", b: (j as { b: string }).b });
+          const jo = j as { b: string; r?: { id?: string; s?: string } };
+          const r =
+            jo.r &&
+            typeof jo.r.id === "string" &&
+            typeof jo.r.s === "string"
+              ? { id: jo.r.id, s: jo.r.s }
+              : undefined;
+          this.onPayload(
+            r
+              ? { v: 1, t: "img", b: jo.b, r }
+              : { v: 1, t: "img", b: jo.b }
+          );
           return;
         }
       } catch {
@@ -157,15 +181,19 @@ export class DirectP2P {
     }
   }
 
-  sendText(text: string) {
+  sendText(text: string, reply?: DmReplyWire) {
     if (this.dc?.readyState === "open") {
-      this.dc.send(JSON.stringify({ v: 1, t: "text", b: text }));
+      const o: Record<string, unknown> = { v: 1, t: "text", b: text };
+      if (reply) o.r = { id: reply.id, s: reply.s };
+      this.dc.send(JSON.stringify(o));
     }
   }
 
-  sendImageDataUrl(dataUrl: string) {
+  sendImageDataUrl(dataUrl: string, reply?: DmReplyWire) {
     if (this.dc?.readyState === "open") {
-      this.dc.send(JSON.stringify({ v: 1, t: "img", b: dataUrl }));
+      const o: Record<string, unknown> = { v: 1, t: "img", b: dataUrl };
+      if (reply) o.r = { id: reply.id, s: reply.s };
+      this.dc.send(JSON.stringify(o));
     }
   }
 

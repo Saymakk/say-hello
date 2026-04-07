@@ -38,22 +38,22 @@ export function ShareIdentity({ shortCode, addUrl }: Props) {
   }
 
   return (
-    <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start sm:justify-center">
-      <div className="rounded-xl border border-[var(--tg-border)] bg-white p-4">
-        <QRCode value={addUrl} size={180} level="M" />
+    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:justify-center">
+      <div className="rounded-lg border border-[var(--tg-border)] bg-white p-3">
+        <QRCode value={addUrl} size={160} level="M" />
       </div>
       <div className="max-w-sm text-center sm:text-left">
         <p className="text-[13px] font-medium text-[var(--tg-text-secondary)]">{t("share.yourCode")}</p>
-        <p className="mt-1 font-mono text-3xl font-semibold tracking-widest text-[var(--tg-text)]">
+        <p className="mt-1 font-mono text-2xl font-semibold tracking-widest text-[var(--tg-text)]">
           {shortCode}
         </p>
-        <p className="mt-3 text-[14px] leading-relaxed text-[var(--tg-text-secondary)]">
+        <p className="mt-2 text-[12px] leading-snug text-[var(--tg-text-secondary)]">
           {t("share.qrHint")}
         </p>
         <button
           type="button"
           onClick={() => void shareContact()}
-          className="mt-4 w-full rounded-lg bg-[var(--tg-accent)] px-4 py-2.5 text-[14px] font-medium text-white sm:w-auto"
+          className="mt-3 w-full rounded-lg bg-[var(--tg-accent)] px-3 py-2 text-[13px] font-medium text-white sm:w-auto"
         >
           {t("share.shareContact")}
         </button>

@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 
-export function PasswordChangeForm() {
+type Props = { variant?: "page" | "modal" };
+
+export function PasswordChangeForm({ variant = "page" }: Props) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [status, setStatus] = useState<string | null>(null);
@@ -29,13 +31,19 @@ export function PasswordChangeForm() {
     setStatus("Пароль обновлён");
   }
 
+  const shell =
+    variant === "modal"
+      ? "mt-0 rounded-lg border-0 bg-transparent p-0"
+      : "mt-3 rounded-lg border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-3";
+
   return (
-    <form
-      onSubmit={onSubmit}
-      className="mt-6 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-5"
-    >
-      <h2 className="text-[14px] font-medium text-[var(--tg-text)]">Смена пароля</h2>
-      <label className="mt-3 flex flex-col gap-1 text-[12px] text-[var(--tg-text-secondary)]">
+    <form onSubmit={onSubmit} className={shell}>
+      {variant === "page" && (
+        <h2 className="text-[14px] font-medium text-[var(--tg-text)]">Смена пароля</h2>
+      )}
+      <label
+        className={`flex flex-col gap-1 text-[12px] text-[var(--tg-text-secondary)] ${variant === "page" ? "mt-3" : "mt-0"}`}
+      >
         Текущий пароль
         <input
           type="password"

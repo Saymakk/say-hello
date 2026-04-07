@@ -12,7 +12,6 @@ type Tab = {
 
 const tabs: Tab[] = [
   { href: "/chats", labelKey: "nav.chats", icon: "chat" },
-  { href: "/groups", labelKey: "nav.groups", icon: "group" },
   { href: "/add", labelKey: "nav.contacts", icon: "contact" },
   { href: "/settings", labelKey: "nav.profileTab", icon: "settings" },
 ];
@@ -54,7 +53,11 @@ function TabIcon({ name, active }: { name: Tab["icon"]; active: boolean }) {
 function isActive(pathname: string | null, href: string) {
   if (!pathname) return false;
   if (href === "/chats") {
-    return pathname === "/chats" || pathname.startsWith("/chats/");
+    return (
+      pathname === "/chats" ||
+      pathname.startsWith("/chats/") ||
+      pathname.startsWith("/groups/")
+    );
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }

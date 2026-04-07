@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { generateRandomNick } from "@/lib/nick-generator";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 
@@ -9,13 +9,22 @@ type Props = {
   initialDisplayName: string | null;
   /** Вызывается после успешного сохранения (например, обновить данные в модалке). */
   onSaved?: () => void;
+  variant?: "page" | "modal";
 };
 
 /** Опциональный ник — отправляется только если пользователь сам заполнит. */
-export function ProfileNickForm({ initialDisplayName, onSaved }: Props) {
+export function ProfileNickForm({
+  initialDisplayName,
+  onSaved,
+  variant = "page",
+}: Props) {
   const router = useRouter();
   const { locale } = useLocale();
   const [value, setValue] = useState(initialDisplayName ?? "");
+
+  useEffect(() => {
+    setValue(initialDisplayName ?? "");
+  }, [initialDisplayName]);
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -38,15 +47,19 @@ export function ProfileNickForm({ initialDisplayName, onSaved }: Props) {
     router.refresh();
   }
 
+  const shell =
+    variant === "modal"
+      ? "mt-0 rounded-lg border-0 bg-transparent p-0"
+      : "mt-3 rounded-lg border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-3";
+
   return (
-    <form
-      onSubmit={save}
-      className="mt-6 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-5"
-    >
-      <h2 className="text-[14px] font-medium text-[var(--tg-text)]">
-        Как вас показывать другим
-      </h2>
-      <p className="mt-1 text-[12px] text-[var(--tg-text-secondary)]">
+    <form onSubmit={save} className={shell}>
+      {variant === "page" && (
+        <h2 className="text-[14px] font-medium text-[var(--tg-text)]">
+          Как вас показывать другим
+        </h2>
+      )}
+      <p className={`text-[12px] text-[var(--tg-text-secondary)] ${variant === "page" ? "mt-1" : "mt-0"}`}>
         Необязательно. Можно оставить пустым для большей анонимности.
       </p>
       <input

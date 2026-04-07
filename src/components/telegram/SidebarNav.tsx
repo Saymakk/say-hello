@@ -1,12 +1,19 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import { useChatObfuscation } from "@/components/ChatObfuscationProvider";
 import { OnlineDot } from "@/components/chat/OnlineDot";
+import { SwipeDeleteChatRow } from "@/components/chat/SwipeDeleteChatRow";
 import { usePeerPresence } from "@/hooks/usePeerPresence";
+import {
+  deleteDmChatLocally,
+  deleteGroupChatLocally,
+} from "@/lib/chat/local-db";
+import { getInboxCache } from "@/lib/chat/inbox-cache";
 import {
   loadUnifiedInboxRows,
   type UnifiedInboxRow,
@@ -22,7 +29,6 @@ type NavItem = {
 
 const nav: NavItem[] = [
   { href: "/chats", labelKey: "nav.chats", icon: "chat" },
-  { href: "/groups", labelKey: "nav.groups", icon: "group" },
   { href: "/add", labelKey: "nav.contacts", icon: "contact" },
   { href: "/settings", labelKey: "nav.settings", icon: "settings" },
 ];
@@ -65,7 +71,9 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { maskText, obfuscateEnabled } = useChatObfuscation();
   const pathname = usePathname();
   const { data: session } = useSession();
-  const [recent, setRecent] = useState<UnifiedInboxRow[]>([]);
+  const [recent, setRecent] = useState<UnifiedInboxRow[]>(() =>
+    getInboxCache().slice(0, 25)
+  );
   const [, setReadTick] = useState(0);
 
   const refreshRecent = useCallback(() => {
@@ -79,7 +87,14 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
   useEffect(() => {
     void refreshRecent();
-  }, [refreshRecent, pathname]);
+  }, [refreshRecent]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      void loadUnifiedInboxRows().then((r) => setRecent(r.slice(0, 25)));
+    }, 25_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     const onChat = () => void refreshRecent();
@@ -102,7 +117,8 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
     if (href === "/chats") {
       return (
         pathname === "/chats" ||
-        (pathname?.startsWith("/chats/") ?? false)
+        (pathname?.startsWith("/chats/") ?? false) ||
+        (pathname?.startsWith("/groups/") ?? false)
       );
     }
     return pathname === href || pathname?.startsWith(`${href}/`);
@@ -114,24 +130,18 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         <Link
           href="/chats"
           onClick={onNavigate}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--tg-accent)] hover:bg-[var(--tg-hover)]"
+          className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl ring-1 ring-[var(--tg-border)] hover:opacity-90"
           aria-label={t("nav.brand")}
           title={t("nav.brand")}
         >
-          <svg
-            className="h-7 w-7"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            aria-hidden
-          >
-            <path
-              d="M21 12a8 8 0 01-8 8H9l-5 3v-3a8 8 0 118-8z"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
+          <Image
+            src="/icon-192.png"
+            alt=""
+            width={40}
+            height={40}
+            className="h-10 w-10 object-cover"
+            priority
+          />
         </Link>
       </div>
 
@@ -186,13 +196,21 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                     c.lastAt > getDmLastReadMs(c.peerId);
                   return (
                     <li key={`dm-${c.peerId}`}>
-                      <Link
-                        href={`/chats/dm/${c.peerId}`}
-                        onClick={onNavigate}
-                        className={`relative flex w-full flex-col gap-1 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-main)] px-3 py-2.5 text-left transition hover:bg-[var(--tg-hover)] ${
-                          activeDm ? "ring-1 ring-[var(--tg-accent)]" : ""
-                        }`}
+                      <SwipeDeleteChatRow
+                        onDelete={() => {
+                          void (async () => {
+                            await deleteDmChatLocally(c.peerId);
+                            void refreshRecent();
+                          })();
+                        }}
                       >
+                        <Link
+                          href={`/chats/dm/${c.peerId}`}
+                          onClick={onNavigate}
+                          className={`relative flex w-full flex-col gap-1 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-main)] px-3 py-2.5 text-left transition hover:bg-[var(--tg-hover)] ${
+                            activeDm ? "ring-1 ring-[var(--tg-accent)]" : ""
+                          }`}
+                        >
                         {unread && (
                           <span
                             className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[var(--tg-accent)]"
@@ -218,6 +236,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                           {obfuscateEnabled ? maskText(c.preview) : c.preview}
                         </span>
                       </Link>
+                      </SwipeDeleteChatRow>
                     </li>
                   );
                 }
@@ -230,13 +249,21 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                     getGroupLastReadMs(c.groupId);
                 return (
                   <li key={`g-${c.groupId}`}>
-                    <Link
-                      href={href}
-                      onClick={onNavigate}
-                      className={`relative flex w-full flex-col gap-1 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-main)] px-3 py-2.5 text-left transition hover:bg-[var(--tg-hover)] ${
-                        activeG ? "ring-1 ring-[var(--tg-accent)]" : ""
-                      }`}
+                    <SwipeDeleteChatRow
+                      onDelete={() => {
+                        void (async () => {
+                          await deleteGroupChatLocally(c.groupId);
+                          void refreshRecent();
+                        })();
+                      }}
                     >
+                      <Link
+                        href={href}
+                        onClick={onNavigate}
+                        className={`relative flex w-full flex-col gap-1 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-main)] px-3 py-2.5 text-left transition hover:bg-[var(--tg-hover)] ${
+                          activeG ? "ring-1 ring-[var(--tg-accent)]" : ""
+                        }`}
+                      >
                       {unreadG && (
                         <span
                           className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[var(--tg-accent)]"
@@ -267,6 +294,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                         {obfuscateEnabled ? maskText(c.preview) : c.preview}
                       </span>
                     </Link>
+                    </SwipeDeleteChatRow>
                   </li>
                 );
               })}

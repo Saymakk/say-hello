@@ -1,6 +1,10 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import { generateEcdhKeyPair } from "@/lib/crypto/dm-e2e";
-import { clearAllReadState } from "@/lib/chat/read-state";
+import {
+  clearAllReadState,
+  removeDmRead,
+  removeGroupRead,
+} from "@/lib/chat/read-state";
 
 /** Локальная подпись к контакту (как удобно назвать). */
 export type ContactRow = {
@@ -22,6 +26,9 @@ export type DmMessageRow = {
   createdAt: number;
   editedAt?: number;
   deleted?: boolean;
+  /** Ответ на сообщение (id и короткая подпись для отображения). */
+  replyToId?: string;
+  replySnippet?: string;
 };
 
 export type E2eIdentityRow = {
@@ -62,10 +69,15 @@ interface ChatDB extends DBSchema {
     value: GroupMessageLocalRow;
     indexes: { "by-group": string };
   };
+  /** Симметричный ключ группы (для E2E групповых сообщений через signals). */
+  groupKeys: {
+    key: string;
+    value: { groupId: string; keyB64: string };
+  };
 }
 
 const DB_NAME = "say-hello-chat";
-const DB_VERSION = 4;
+const DB_VERSION = 6;
 
 let dbPromise: Promise<IDBPDatabase<ChatDB>> | null = null;
 
@@ -94,6 +106,31 @@ export function getChatDb() {
           if (!db.objectStoreNames.contains("groupMessages")) {
             const s = db.createObjectStore("groupMessages", { keyPath: "id" });
             s.createIndex("by-group", "groupId");
+          }
+        }
+        if (oldVersion < 5) {
+          if (!db.objectStoreNames.contains("groupKeys")) {
+            db.createObjectStore("groupKeys", { keyPath: "groupId" });
+          }
+        }
+        /** Восстановить отсутствующие хранилища (сбой миграции, старая сборка). */
+        if (oldVersion < 6) {
+          if (!db.objectStoreNames.contains("groupKeys")) {
+            db.createObjectStore("groupKeys", { keyPath: "groupId" });
+          }
+          if (!db.objectStoreNames.contains("groupMessages")) {
+            const s = db.createObjectStore("groupMessages", { keyPath: "id" });
+            s.createIndex("by-group", "groupId");
+          }
+          if (!db.objectStoreNames.contains("e2eIdentity")) {
+            db.createObjectStore("e2eIdentity", { keyPath: "id" });
+          }
+          if (!db.objectStoreNames.contains("contacts")) {
+            db.createObjectStore("contacts", { keyPath: "peerId" });
+          }
+          if (!db.objectStoreNames.contains("dmMessages")) {
+            const s = db.createObjectStore("dmMessages", { keyPath: "id" });
+            s.createIndex("by-peer", "peerId");
           }
         }
       },
@@ -279,6 +316,7 @@ export async function clearAllLocalChatData() {
   await db.clear("contacts");
   await db.clear("e2eIdentity");
   await db.clear("groupMessages");
+  await db.clear("groupKeys");
   clearAllReadState();
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("say-hello-chat-updated"));
@@ -350,6 +388,50 @@ export async function importLocalChatDump(
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("say-hello-chat-updated"));
   }
+}
+
+export async function getGroupKeyB64(groupId: string): Promise<string | null> {
+  const db = await getChatDb();
+  const row = await db.get("groupKeys", groupId);
+  return row?.keyB64 ?? null;
+}
+
+export async function setGroupKeyB64(groupId: string, keyB64: string) {
+  const db = await getChatDb();
+  await db.put("groupKeys", { groupId, keyB64 });
+}
+
+/** Удалить локально переписку с контактом (без сервера). */
+export async function deleteDmChatLocally(peerId: string) {
+  const db = await getChatDb();
+  const rows = await db.getAllFromIndex("dmMessages", "by-peer", peerId);
+  for (const m of rows) await db.delete("dmMessages", m.id);
+  await db.delete("contacts", peerId);
+  removeDmRead(peerId);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("say-hello-chat-updated"));
+  }
+}
+
+/** Удалить локальный кэш группы и ключ группы. */
+export async function deleteGroupChatLocally(groupId: string) {
+  await deleteGroupMessagesLocal(groupId);
+  const db = await getChatDb();
+  await db.delete("groupKeys", groupId);
+  removeGroupRead(groupId);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("say-hello-chat-updated"));
+  }
+}
+
+export async function getLastGroupMessagePreview(groupId: string): Promise<string | null> {
+  const rows = await getGroupMessagesLocal(groupId);
+  if (rows.length === 0) return null;
+  const last = rows[rows.length - 1]!;
+  if (last.imageDataUrl) return "📷 Фото";
+  const t = last.body.trim();
+  if (!t || t === " ") return "Сообщение";
+  return t.length > 80 ? `${t.slice(0, 80)}…` : t;
 }
 
 /** Недавние: контакты (в т.ч. только что найденные) + превью переписки. */

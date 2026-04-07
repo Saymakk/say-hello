@@ -15,7 +15,7 @@ export function AddContactsView({ initialCode }: { initialCode: string }) {
         <AddByCodeClient initialCode={initialCode} />
         <p className="mt-8 text-center text-[13px] text-[var(--tg-text-secondary)]">
           {t("addPage.groupsHintBefore")}
-          <Link href="/groups" className="font-medium text-[var(--tg-accent)] hover:underline">
+          <Link href="/chats" className="font-medium text-[var(--tg-accent)] hover:underline">
             {t("addPage.groupsLink")}
           </Link>
           {t("addPage.groupsHintAfter")}

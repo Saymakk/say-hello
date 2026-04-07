@@ -1,9 +1,9 @@
-import { eq, inArray, max } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, max } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { groupMembers, groupMessages, groups } from "@/db/schema";
+import { groupMembers, groups, signalPackets } from "@/db/schema";
 
 const createSchema = z.object({
   name: z.string().min(1).max(80),
@@ -31,13 +31,20 @@ export async function GET() {
   if (ids.length > 0) {
     const lasts = await db
       .select({
-        groupId: groupMessages.groupId,
-        lastAt: max(groupMessages.createdAt),
+        groupId: signalPackets.groupId,
+        lastAt: max(signalPackets.createdAt),
       })
-      .from(groupMessages)
-      .where(inArray(groupMessages.groupId, ids))
-      .groupBy(groupMessages.groupId);
-    lastMap = new Map(lasts.map((x) => [x.groupId, x.lastAt]));
+      .from(signalPackets)
+      .where(
+        and(
+          inArray(signalPackets.groupId, ids),
+          isNotNull(signalPackets.groupId)
+        )
+      )
+      .groupBy(signalPackets.groupId);
+    lastMap = new Map(
+      lasts.map((x) => [x.groupId as string, x.lastAt])
+    );
   }
   const list = rows
     .map((r) => ({

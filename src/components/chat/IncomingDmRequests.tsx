@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { notifyInboxAndSidebarRefresh } from "@/lib/chat/inbox-events";
+import { upsertContact } from "@/lib/chat/local-db";
 
 type Row = {
   id: string;
@@ -33,14 +35,21 @@ export function IncomingDmRequests() {
     return () => clearInterval(id);
   }, [load]);
 
-  async function accept(requestId: string) {
-    setBusy(requestId);
-    const res = await fetch(`/api/dm/requests/${requestId}/accept`, {
+  async function accept(r: Row) {
+    setBusy(r.id);
+    const res = await fetch(`/api/dm/requests/${r.id}/accept`, {
       method: "POST",
       credentials: "include",
     });
     setBusy(null);
     if (res.ok) {
+      await upsertContact({
+        peerId: r.from.id,
+        shortCode: r.from.shortCode,
+        displayName: r.from.displayName,
+        updatedAt: Date.now(),
+      });
+      notifyInboxAndSidebarRefresh();
       await load();
       router.refresh();
     }
@@ -81,7 +90,7 @@ export function IncomingDmRequests() {
             <button
               type="button"
               disabled={busy === r.id}
-              onClick={() => void accept(r.id)}
+              onClick={() => void accept(r)}
               className="rounded-lg bg-[var(--tg-accent)] px-3 py-1.5 text-[13px] font-medium text-white disabled:opacity-50"
             >
               Принять

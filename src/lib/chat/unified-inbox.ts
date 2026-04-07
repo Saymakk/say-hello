@@ -1,4 +1,8 @@
-import { listRecentSidebar } from "@/lib/chat/local-db";
+import {
+  getLastGroupMessagePreview,
+  listRecentSidebar,
+} from "@/lib/chat/local-db";
+import { setInboxCache } from "@/lib/chat/inbox-cache";
 
 type ApiGroup = {
   id: string;
@@ -47,24 +51,30 @@ export async function loadUnifiedInboxRows(): Promise<UnifiedInboxRow[]> {
     lastDirection: c.lastDirection,
   }));
 
-  const groupRows: UnifiedInboxRow[] = apiGroups.map((g) => {
-    const lastMsgMs = g.lastMessageAt
-      ? new Date(g.lastMessageAt).getTime()
-      : null;
-    const createdMs = new Date(g.createdAt).getTime();
-    const lastAt = lastMsgMs ?? createdMs;
-    const preview =
-      g.role === "admin" ? "Группа · админ" : "Группа · участник";
-    return {
-      kind: "group",
-      groupId: g.id,
-      label: g.name,
-      preview,
-      lastAt,
-      lastMessageAt: g.lastMessageAt,
-      role: g.role,
-    };
-  });
+  const groupRows: UnifiedInboxRow[] = await Promise.all(
+    apiGroups.map(async (g) => {
+      const localPreview = await getLastGroupMessagePreview(g.id);
+      const lastMsgMs = g.lastMessageAt
+        ? new Date(g.lastMessageAt).getTime()
+        : null;
+      const createdMs = new Date(g.createdAt).getTime();
+      const lastAt = lastMsgMs ?? createdMs;
+      const preview =
+        localPreview ??
+        (g.role === "admin" ? "Группа · админ" : "Группа · участник");
+      return {
+        kind: "group" as const,
+        groupId: g.id,
+        label: g.name,
+        preview,
+        lastAt,
+        lastMessageAt: g.lastMessageAt,
+        role: g.role,
+      };
+    })
+  );
 
-  return [...dmRows, ...groupRows].sort((a, b) => b.lastAt - a.lastAt);
+  const merged = [...dmRows, ...groupRows].sort((a, b) => b.lastAt - a.lastAt);
+  setInboxCache(merged);
+  return merged;
 }

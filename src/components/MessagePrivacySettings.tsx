@@ -1,13 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useChatObfuscation } from "@/components/ChatObfuscationProvider";
 
 type Props = {
   initialWindowMinutes: number;
+  variant?: "page" | "modal";
 };
 
-export function MessagePrivacySettings({ initialWindowMinutes }: Props) {
+export function MessagePrivacySettings({
+  initialWindowMinutes,
+  variant = "page",
+}: Props) {
   const {
     obfuscateEnabled,
     setObfuscateEnabled,
@@ -15,6 +19,10 @@ export function MessagePrivacySettings({ initialWindowMinutes }: Props) {
     tryUnlockWithPassword,
   } = useChatObfuscation();
   const [minutes, setMinutes] = useState(String(initialWindowMinutes));
+
+  useEffect(() => {
+    setMinutes(String(initialWindowMinutes));
+  }, [initialWindowMinutes]);
   const [pwd, setPwd] = useState("");
   const [unlockMsg, setUnlockMsg] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -60,9 +68,11 @@ export function MessagePrivacySettings({ initialWindowMinutes }: Props) {
     setUnlockMsg(`Верно. Осталось успешных вводов: ${Math.max(0, left)}.`);
   }
 
+  const outer = variant === "modal" ? "mt-0 space-y-3" : "mt-3 space-y-3";
+
   return (
-    <div className="mt-6 space-y-6">
-      <div className="rounded-xl border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-5">
+    <div className={outer}>
+      <div className="rounded-lg border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-3">
         <h2 className="text-[14px] font-medium text-[var(--tg-text)]">
           Редактирование и удаление сообщений
         </h2>
@@ -96,7 +106,7 @@ export function MessagePrivacySettings({ initialWindowMinutes }: Props) {
         </div>
       </div>
 
-      <div className="rounded-xl border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-5">
+      <div className="rounded-lg border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-3">
         <h2 className="text-[14px] font-medium text-[var(--tg-text)]">
           Скрыть текст в чатах на экране
         </h2>

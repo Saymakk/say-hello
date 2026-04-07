@@ -3,13 +3,21 @@
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import type { Locale } from "@/lib/i18n/dictionaries";
 
-export function LanguageSwitcher() {
+type Props = { variant?: "page" | "modal" };
+
+export function LanguageSwitcher({ variant = "page" }: Props) {
   const { locale, setLocale, t } = useLocale();
+  const shell =
+    variant === "modal"
+      ? "mt-0 rounded-lg border-0 bg-transparent p-0"
+      : "mt-3 rounded-lg border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-3";
 
   return (
-    <div className="mt-6 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-5">
-      <h2 className="text-[14px] font-medium text-[var(--tg-text)]">{t("settings.language")}</h2>
-      <div className="mt-3 flex flex-wrap gap-2">
+    <div className={shell}>
+      {variant === "page" && (
+        <h2 className="text-[14px] font-medium text-[var(--tg-text)]">{t("settings.language")}</h2>
+      )}
+      <div className={variant === "modal" ? "flex flex-wrap gap-2" : "mt-3 flex flex-wrap gap-2"}>
         {(["ru", "en"] as Locale[]).map((l) => (
           <button
             key={l}

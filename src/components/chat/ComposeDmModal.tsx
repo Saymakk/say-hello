@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { notifyInboxAndSidebarRefresh } from "@/lib/chat/inbox-events";
 import { upsertContact } from "@/lib/chat/local-db";
 
 type Lookup = {
@@ -41,6 +42,7 @@ export function ComposeDmModal({ onClose }: { onClose: () => void }) {
       displayName: r.displayName,
       updatedAt: Date.now(),
     });
+    notifyInboxAndSidebarRefresh();
   }
 
   async function sendRequest(e: React.FormEvent) {
@@ -62,6 +64,7 @@ export function ComposeDmModal({ onClose }: { onClose: () => void }) {
       setError(typeof data.error === "string" ? data.error : "Не удалось отправить запрос");
       return;
     }
+    notifyInboxAndSidebarRefresh();
     onClose();
     router.push(`/chats/dm/${result.id}`);
     router.refresh();

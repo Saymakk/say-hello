@@ -6,6 +6,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useChatObfuscation } from "@/components/ChatObfuscationProvider";
 import { OnlineDot } from "@/components/chat/OnlineDot";
 import { usePeerPresence } from "@/hooks/usePeerPresence";
+import { SwipeDeleteChatRow } from "@/components/chat/SwipeDeleteChatRow";
+import {
+  deleteDmChatLocally,
+  deleteGroupChatLocally,
+} from "@/lib/chat/local-db";
+import { getInboxCache } from "@/lib/chat/inbox-cache";
 import {
   loadUnifiedInboxRows,
   type UnifiedInboxRow,
@@ -15,7 +21,7 @@ import { getDmLastReadMs, getGroupLastReadMs } from "@/lib/chat/read-state";
 export function ChatListPanel() {
   const pathname = usePathname();
   const { maskText, obfuscateEnabled } = useChatObfuscation();
-  const [rows, setRows] = useState<UnifiedInboxRow[]>([]);
+  const [rows, setRows] = useState<UnifiedInboxRow[]>(() => getInboxCache());
   const [, setReadTick] = useState(0);
 
   const peerIds = useMemo(
@@ -30,7 +36,14 @@ export function ChatListPanel() {
 
   useEffect(() => {
     void refresh();
-  }, [refresh, pathname]);
+  }, [refresh]);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      void loadUnifiedInboxRows().then(setRows);
+    }, 25_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   useEffect(() => {
     const onChat = () => void refresh();
@@ -54,13 +67,10 @@ export function ChatListPanel() {
       <div className="tg-scroll flex-1 overflow-y-auto px-4 py-3">
         {rows.length === 0 ? (
           <div className="py-10 text-center text-[13px] text-[var(--tg-text-secondary)]">
-            Нет чатов. Найдите человека в{" "}
+            Нет чатов. Нажмите «+» внизу — написать по коду, сканировать QR или создать группу. Либо
+            откройте{" "}
             <Link href="/add" className="text-[var(--tg-accent)] hover:underline">
-              Контактах
-            </Link>{" "}
-            или откройте{" "}
-            <Link href="/groups" className="text-[var(--tg-accent)] hover:underline">
-              группы
+              контакты
             </Link>
             .
           </div>
@@ -76,12 +86,20 @@ export function ChatListPanel() {
                   c.lastAt > getDmLastReadMs(c.peerId);
                 return (
                   <li key={`dm-${c.peerId}`}>
-                    <Link
-                      href={href}
-                      className={`relative flex w-full flex-col gap-1 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-main)] px-3 py-3 transition hover:bg-[var(--tg-hover)] ${
-                        active ? "ring-1 ring-[var(--tg-accent)]" : ""
-                      }`}
+                    <SwipeDeleteChatRow
+                      onDelete={() => {
+                        void (async () => {
+                          await deleteDmChatLocally(c.peerId);
+                          void refresh();
+                        })();
+                      }}
                     >
+                      <Link
+                        href={href}
+                        className={`relative flex w-full flex-col gap-1 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-main)] px-3 py-3 transition hover:bg-[var(--tg-hover)] ${
+                          active ? "ring-1 ring-[var(--tg-accent)]" : ""
+                        }`}
+                      >
                       {unread && (
                         <span
                           className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-[var(--tg-accent)] shadow-sm"
@@ -107,6 +125,7 @@ export function ChatListPanel() {
                         {obfuscateEnabled ? maskText(c.preview) : c.preview}
                       </span>
                     </Link>
+                    </SwipeDeleteChatRow>
                   </li>
                 );
               }
@@ -120,12 +139,20 @@ export function ChatListPanel() {
                   getGroupLastReadMs(c.groupId);
               return (
                 <li key={`g-${c.groupId}`}>
-                  <Link
-                    href={href}
-                    className={`relative flex w-full flex-col gap-1 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-main)] px-3 py-3 transition hover:bg-[var(--tg-hover)] ${
-                      active ? "ring-1 ring-[var(--tg-accent)]" : ""
-                    }`}
+                  <SwipeDeleteChatRow
+                    onDelete={() => {
+                      void (async () => {
+                        await deleteGroupChatLocally(c.groupId);
+                        void refresh();
+                      })();
+                    }}
                   >
+                    <Link
+                      href={href}
+                      className={`relative flex w-full flex-col gap-1 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-main)] px-3 py-3 transition hover:bg-[var(--tg-hover)] ${
+                        active ? "ring-1 ring-[var(--tg-accent)]" : ""
+                      }`}
+                    >
                     {unread && (
                       <span
                         className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-[var(--tg-accent)] shadow-sm"
@@ -168,6 +195,7 @@ export function ChatListPanel() {
                       {obfuscateEnabled ? maskText(c.preview) : c.preview}
                     </span>
                   </Link>
+                  </SwipeDeleteChatRow>
                 </li>
               );
             })}

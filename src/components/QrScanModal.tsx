@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { extractInviteCodeFromQrText } from "@/lib/qr/extract-invite-code";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { notifyInboxAndSidebarRefresh } from "@/lib/chat/inbox-events";
 import { upsertContact } from "@/lib/chat/local-db";
 
 const READER_ID = "say-hello-qr-reader";
@@ -90,6 +91,7 @@ export function QrScanModal({ open, onClose }: Props) {
               displayName: data.displayName ?? null,
               updatedAt: Date.now(),
             });
+            notifyInboxAndSidebarRefresh();
             router.push(`/chats/dm/${data.id}`);
           },
           undefined

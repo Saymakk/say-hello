@@ -9,6 +9,8 @@ export type DmRelayPayload =
       body: string;
       ts: number;
       enc?: false;
+      replyToId?: string;
+      replySnippet?: string;
     }
   | {
       kind: "dm-text";
@@ -16,6 +18,8 @@ export type DmRelayPayload =
       ts: number;
       enc: true;
       c: string;
+      replyToId?: string;
+      replySnippet?: string;
     }
   | {
       kind: "dm-image";
@@ -23,6 +27,8 @@ export type DmRelayPayload =
       body: string;
       ts: number;
       enc?: false;
+      replyToId?: string;
+      replySnippet?: string;
     }
   | {
       kind: "dm-image";
@@ -30,6 +36,8 @@ export type DmRelayPayload =
       ts: number;
       enc: true;
       c: string;
+      replyToId?: string;
+      replySnippet?: string;
     }
   | {
       kind: "dm-text-edit";

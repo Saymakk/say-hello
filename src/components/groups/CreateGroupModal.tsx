@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { notifyInboxAndSidebarRefresh } from "@/lib/chat/inbox-events";
 
 type Props = {
   open: boolean;
@@ -49,6 +50,7 @@ export function CreateGroupModal({ open, onClose }: Props) {
     }
     setName("");
     onClose();
+    notifyInboxAndSidebarRefresh();
     router.push(`/groups/${data.id}`);
     router.refresh();
   }

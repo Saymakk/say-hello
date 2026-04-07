@@ -31,6 +31,18 @@ export function setGroupLastReadMs(groupId: string, atMs: number) {
   window.dispatchEvent(new CustomEvent("say-hello-read-updated"));
 }
 
+export function removeDmRead(peerId: string) {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(DM + peerId);
+  window.dispatchEvent(new CustomEvent("say-hello-read-updated"));
+}
+
+export function removeGroupRead(groupId: string) {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(GRP + groupId);
+  window.dispatchEvent(new CustomEvent("say-hello-read-updated"));
+}
+
 /** Сброс всех отметок прочитано (при экстренной очистке). */
 export function clearAllReadState() {
   if (typeof window === "undefined") return;

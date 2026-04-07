@@ -17,8 +17,10 @@ function isStandalone(): boolean {
   return nav.standalone === true;
 }
 
-/** Карточка в настройках: установка PWA (скрывается в уже установленном режиме). */
-export function PwaInstallHint() {
+type Props = { variant?: "page" | "modal" };
+
+/** Карточка в настройках: установка PWA (скрывается в уже установленном режиме). В модалке — всегда есть текст подсказки. */
+export function PwaInstallHint({ variant = "page" }: Props) {
   const [mounted, setMounted] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [canPrompt, setCanPrompt] = useState(false);
@@ -62,13 +64,74 @@ export function PwaInstallHint() {
     setCanPrompt(false);
   }, []);
 
-  if (!mounted || isStandalone() || dismissed) {
+  const hidePageCard =
+    variant === "page" && (!mounted || isStandalone() || dismissed);
+  if (hidePageCard) {
     return null;
+  }
+
+  if (variant === "modal") {
+    if (!mounted) return null;
+    if (isStandalone()) {
+      return (
+        <div className="mt-0 rounded-lg border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-3">
+          <h2 className="text-[14px] font-medium text-[var(--tg-text)]">Приложение</h2>
+          <p className="mt-1 text-[12px] leading-snug text-[var(--tg-text-secondary)]">
+            Say Hello уже открыт в режиме установленного приложения (отдельное окно или экран «Домой»).
+          </p>
+        </div>
+      );
+    }
+    if (canPrompt) {
+      return (
+        <div className="mt-0 rounded-lg border border-[var(--tg-border)] bg-[var(--tg-accent-soft)] p-3">
+          <h2 className="text-[14px] font-medium text-[var(--tg-text)]">
+            Установить как приложение
+          </h2>
+          <p className="mt-1 text-[12px] leading-snug text-[var(--tg-text-secondary)]">
+            Добавьте Say Hello на рабочий стол или в меню приложений — быстрее открытие и удобнее на
+            телефоне.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void install()}
+              className="rounded-lg bg-[var(--tg-accent)] px-4 py-2 text-[13px] font-medium text-white"
+            >
+              Установить
+            </button>
+          </div>
+        </div>
+      );
+    }
+    if (iosLike) {
+      return (
+        <div className="mt-0 rounded-lg border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-3">
+          <h2 className="text-[14px] font-medium text-[var(--tg-text)]">
+            Установить на экран «Домой»
+          </h2>
+          <p className="mt-1 text-[12px] leading-snug text-[var(--tg-text-secondary)]">
+            На iPhone или iPad: кнопка «Поделиться» в браузере → «На экран Домой». Откроется как
+            отдельное приложение.
+          </p>
+        </div>
+      );
+    }
+    return (
+      <div className="mt-0 rounded-lg border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-3">
+        <h2 className="text-[14px] font-medium text-[var(--tg-text)]">Установить как приложение</h2>
+        <p className="mt-1 text-[12px] leading-snug text-[var(--tg-text-secondary)]">
+          В Chrome или Edge откройте меню браузера (три точки) и выберите «Установить приложение» или
+          «Установить Say Hello», если пункт есть. В Firefox PWA может называться «Установить» в меню
+          страницы.
+        </p>
+      </div>
+    );
   }
 
   if (canPrompt) {
     return (
-      <div className="mt-6 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-accent-soft)] p-5">
+      <div className="mt-3 rounded-lg border border-[var(--tg-border)] bg-[var(--tg-accent-soft)] p-3">
         <h2 className="text-[14px] font-medium text-[var(--tg-text)]">
           Установить как приложение
         </h2>
@@ -98,7 +161,7 @@ export function PwaInstallHint() {
 
   if (iosLike) {
     return (
-      <div className="mt-6 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-5">
+      <div className="mt-3 rounded-lg border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-3">
         <h2 className="text-[14px] font-medium text-[var(--tg-text)]">
           Установить на экран «Домой»
         </h2>
