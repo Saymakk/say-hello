@@ -12,6 +12,7 @@ const patchSchema = z.object({
     .optional()
     .nullable()
     .transform((v) => (v === "" ? null : v)),
+  messageEditWindowMinutes: z.number().int().min(1).max(10_080).optional(),
 });
 
 /** Опциональное имя/ник — только по желанию пользователя. */
@@ -33,9 +34,19 @@ export async function PATCH(request: Request) {
       { status: 400 }
     );
   }
-  await db
-    .update(users)
-    .set({ displayName: parsed.data.displayName ?? null })
-    .where(eq(users.id, session.user.id));
+  const updates: {
+    displayName?: string | null;
+    messageEditWindowMinutes?: number;
+  } = {};
+  if (parsed.data.displayName !== undefined) {
+    updates.displayName = parsed.data.displayName ?? null;
+  }
+  if (parsed.data.messageEditWindowMinutes !== undefined) {
+    updates.messageEditWindowMinutes = parsed.data.messageEditWindowMinutes;
+  }
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "Нет полей для обновления" }, { status: 400 });
+  }
+  await db.update(users).set(updates).where(eq(users.id, session.user.id));
   return NextResponse.json({ ok: true });
 }

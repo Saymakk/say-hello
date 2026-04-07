@@ -1,9 +1,9 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray, max } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { groupMembers, groups } from "@/db/schema";
+import { groupMembers, groupMessages, groups } from "@/db/schema";
 
 const createSchema = z.object({
   name: z.string().min(1).max(80),
@@ -26,7 +26,31 @@ export async function GET() {
     .from(groupMembers)
     .innerJoin(groups, eq(groupMembers.groupId, groups.id))
     .where(eq(groupMembers.userId, uid));
-  return NextResponse.json(rows);
+  const ids = rows.map((r) => r.id);
+  let lastMap = new Map<string, Date | null>();
+  if (ids.length > 0) {
+    const lasts = await db
+      .select({
+        groupId: groupMessages.groupId,
+        lastAt: max(groupMessages.createdAt),
+      })
+      .from(groupMessages)
+      .where(inArray(groupMessages.groupId, ids))
+      .groupBy(groupMessages.groupId);
+    lastMap = new Map(lasts.map((x) => [x.groupId, x.lastAt]));
+  }
+  const list = rows
+    .map((r) => ({
+      ...r,
+      lastMessageAt: lastMap.get(r.id)?.toISOString() ?? null,
+    }))
+    .sort((a, b) => {
+      const ta = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+      const tb = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+      if (tb !== ta) return tb - ta;
+      return a.name.localeCompare(b.name, "ru");
+    });
+  return NextResponse.json(list);
 }
 
 /** Создание группы: автор становится admin. */

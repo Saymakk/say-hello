@@ -1,5 +1,6 @@
 "use client";
 
+import { startAuthentication } from "@simplewebauthn/browser";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -13,6 +14,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [bioLoading, setBioLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,6 +32,66 @@ export function LoginForm() {
     }
     router.push(callbackUrl);
     router.refresh();
+  }
+
+  async function onPasskeyLogin() {
+    setError(null);
+    const em = email.trim().toLowerCase();
+    if (!em) {
+      setError("Введите email — по нему подбирается ключ на устройстве");
+      return;
+    }
+    setBioLoading(true);
+    try {
+      const optRes = await fetch("/api/webauthn/login/options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: em }),
+      });
+      if (!optRes.ok) {
+        const e = await optRes.json().catch(() => ({}));
+        setError(typeof e.error === "string" ? e.error : "Не удалось начать вход по ключу");
+        setBioLoading(false);
+        return;
+      }
+      const options = await optRes.json();
+      const assertion = await startAuthentication(options);
+      const verRes = await fetch("/api/webauthn/login/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(assertion),
+      });
+      if (!verRes.ok) {
+        const e = await verRes.json().catch(() => ({}));
+        setError(typeof e.error === "string" ? e.error : "Проверка ключа не прошла");
+        setBioLoading(false);
+        return;
+      }
+      const { passkeyCode } = (await verRes.json()) as { passkeyCode?: string };
+      if (!passkeyCode) {
+        setError("Сервер не вернул код сессии");
+        setBioLoading(false);
+        return;
+      }
+      const res = await signIn("credentials", {
+        passkeyCode,
+        redirect: false,
+      });
+      setBioLoading(false);
+      if (res?.error) {
+        setError("Не удалось завершить вход");
+        return;
+      }
+      router.push(callbackUrl);
+      router.refresh();
+    } catch (err) {
+      setBioLoading(false);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Биометрия недоступна или операция отменена"
+      );
+    }
   }
 
   return (
@@ -67,10 +129,18 @@ export function LoginForm() {
           )}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || bioLoading}
             className="mt-2 rounded-lg bg-[var(--tg-accent)] py-3 text-[14px] font-medium text-white disabled:opacity-50"
           >
             {loading ? "Входим…" : "Войти"}
+          </button>
+          <button
+            type="button"
+            disabled={loading || bioLoading}
+            onClick={() => void onPasskeyLogin()}
+            className="rounded-lg border border-[var(--tg-border)] py-3 text-[14px] font-medium text-[var(--tg-text)] disabled:opacity-50"
+          >
+            {bioLoading ? "Ключ…" : "Face ID / отпечаток"}
           </button>
         </form>
         <p className="mt-6 text-center text-[14px] text-[var(--tg-text-secondary)]">

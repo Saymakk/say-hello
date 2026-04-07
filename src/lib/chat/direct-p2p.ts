@@ -5,6 +5,12 @@ type SignalPayload =
   | { kind: "answer"; sdp: RTCSessionDescriptionInit }
   | { kind: "ice"; candidate: RTCIceCandidateInit };
 
+export type DmWirePayload =
+  | { v: 1; t: "text"; b: string }
+  | { v: 1; t: "img"; b: string };
+
+export type DmIncomingPayload = DmWirePayload | { legacyText: string };
+
 async function postSignal(toUserId: string, payload: SignalPayload) {
   await fetch("/api/signals", {
     method: "POST",
@@ -25,7 +31,7 @@ export class DirectP2P {
   constructor(
     private selfId: string,
     private peerId: string,
-    private onText: (text: string) => void,
+    private onPayload: (p: DmIncomingPayload) => void,
     private onConnection: (state: string) => void
   ) {}
 
@@ -82,12 +88,33 @@ export class DirectP2P {
     dc.onopen = () => this.onConnection("connected");
     dc.onclose = () => this.onConnection("disconnected");
     dc.onmessage = (ev) => {
+      const raw = String(ev.data);
       try {
-        const j = JSON.parse(String(ev.data)) as { text?: string };
-        if (typeof j.text === "string") this.onText(j.text);
+        const j = JSON.parse(raw) as unknown;
+        if (
+          typeof j === "object" &&
+          j !== null &&
+          (j as { v?: number }).v === 1 &&
+          (j as { t?: string }).t === "text" &&
+          typeof (j as { b?: string }).b === "string"
+        ) {
+          this.onPayload({ v: 1, t: "text", b: (j as { b: string }).b });
+          return;
+        }
+        if (
+          typeof j === "object" &&
+          j !== null &&
+          (j as { v?: number }).v === 1 &&
+          (j as { t?: string }).t === "img" &&
+          typeof (j as { b?: string }).b === "string"
+        ) {
+          this.onPayload({ v: 1, t: "img", b: (j as { b: string }).b });
+          return;
+        }
       } catch {
-        this.onText(String(ev.data));
+        /* legacy plain text */
       }
+      this.onPayload({ legacyText: raw });
     };
   }
 
@@ -97,6 +124,13 @@ export class DirectP2P {
     try {
       data = JSON.parse(raw) as SignalPayload;
     } catch {
+      return;
+    }
+    if (
+      data.kind !== "offer" &&
+      data.kind !== "answer" &&
+      data.kind !== "ice"
+    ) {
       return;
     }
     try {
@@ -123,9 +157,15 @@ export class DirectP2P {
     }
   }
 
-  send(text: string) {
+  sendText(text: string) {
     if (this.dc?.readyState === "open") {
-      this.dc.send(JSON.stringify({ text, ts: Date.now() }));
+      this.dc.send(JSON.stringify({ v: 1, t: "text", b: text }));
+    }
+  }
+
+  sendImageDataUrl(dataUrl: string) {
+    if (this.dc?.readyState === "open") {
+      this.dc.send(JSON.stringify({ v: 1, t: "img", b: dataUrl }));
     }
   }
 

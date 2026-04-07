@@ -1,5 +1,7 @@
 "use client";
 
+import { IncomingDmRequests } from "@/components/chat/IncomingDmRequests";
+import { PresenceHeartbeat } from "@/components/PresenceHeartbeat";
 import { BottomTabBar } from "./BottomTabBar";
 import { SidebarNav } from "./SidebarNav";
 
@@ -9,7 +11,9 @@ import { SidebarNav } from "./SidebarNav";
 export function AppShellClient() {
   return (
     <>
-      <aside className="hidden h-full w-[min(100%,22rem)] shrink-0 flex-col border-r border-[var(--tg-border)] bg-[var(--tg-sidebar)] shadow-[2px_0_8px_rgba(0,0,0,0.04)] md:flex">
+      <IncomingDmRequests />
+      <PresenceHeartbeat />
+      <aside className="hidden h-full w-[min(100%,18rem)] shrink-0 flex-col border-r border-[var(--tg-border)] bg-[var(--tg-sidebar)] shadow-[2px_0_8px_rgba(0,0,0,0.04)] md:flex">
         <SidebarNav />
       </aside>
       <BottomTabBar />

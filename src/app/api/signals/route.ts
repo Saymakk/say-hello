@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { groupMembers, signalPackets } from "@/db/schema";
+import { ensureDmTextAllowed } from "@/lib/server/dm-access";
 
 const postSchema = z.object({
   /** Личный сигнал */
@@ -83,6 +84,23 @@ export async function POST(request: Request) {
     );
   }
   const fromUserId = session.user.id;
+  if (toUserId) {
+    let parsed: { kind?: string } | null = null;
+    try {
+      parsed = JSON.parse(payload) as { kind?: string };
+    } catch {
+      /* не JSON — пропускаем проверку лички */
+    }
+    if (parsed?.kind === "dm-text" || parsed?.kind === "dm-image") {
+      const ok = await ensureDmTextAllowed(fromUserId, toUserId);
+      if (!ok) {
+        return NextResponse.json(
+          { error: "Нет доступа к переписке или контакт заблокирован" },
+          { status: 403 }
+        );
+      }
+    }
+  }
   if (groupId) {
     const [m] = await db
       .select()

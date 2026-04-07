@@ -3,20 +3,28 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
-import { listDmConversations } from "@/lib/chat/local-db";
+import { useCallback, useEffect, useState } from "react";
+import { useChatObfuscation } from "@/components/ChatObfuscationProvider";
+import { OnlineDot } from "@/components/chat/OnlineDot";
+import { usePeerPresence } from "@/hooks/usePeerPresence";
+import {
+  loadUnifiedInboxRows,
+  type UnifiedInboxRow,
+} from "@/lib/chat/unified-inbox";
+import { getDmLastReadMs, getGroupLastReadMs } from "@/lib/chat/read-state";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 
 type NavItem = {
   href: string;
-  label: string;
+  labelKey: string;
   icon: "chat" | "group" | "contact" | "settings";
 };
 
 const nav: NavItem[] = [
-  { href: "/chats", label: "Чаты", icon: "chat" },
-  { href: "/groups", label: "Группы", icon: "group" },
-  { href: "/add", label: "Контакты", icon: "contact" },
-  { href: "/settings", label: "Настройки", icon: "settings" },
+  { href: "/chats", labelKey: "nav.chats", icon: "chat" },
+  { href: "/groups", labelKey: "nav.groups", icon: "group" },
+  { href: "/add", labelKey: "nav.contacts", icon: "contact" },
+  { href: "/settings", labelKey: "nav.settings", icon: "settings" },
 ];
 
 function Icon({ name }: { name: NavItem["icon"] }) {
@@ -53,22 +61,41 @@ function Icon({ name }: { name: NavItem["icon"] }) {
 }
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+  const { t } = useLocale();
+  const { maskText, obfuscateEnabled } = useChatObfuscation();
   const pathname = usePathname();
   const { data: session } = useSession();
-  const [recent, setRecent] = useState<
-    Awaited<ReturnType<typeof listDmConversations>>
-  >([]);
+  const [recent, setRecent] = useState<UnifiedInboxRow[]>([]);
+  const [, setReadTick] = useState(0);
+
+  const refreshRecent = useCallback(() => {
+    void loadUnifiedInboxRows().then((r) => setRecent(r.slice(0, 25)));
+  }, []);
+
+  const recentDmIds = recent
+    .filter((c): c is Extract<UnifiedInboxRow, { kind: "dm" }> => c.kind === "dm")
+    .map((c) => c.peerId);
+  const presence = usePeerPresence(recentDmIds);
 
   useEffect(() => {
-    void (async () => {
-      const r = await listDmConversations();
-      setRecent(r);
-    })();
-    const handler = () => {
-      void listDmConversations().then(setRecent);
+    void refreshRecent();
+  }, [refreshRecent, pathname]);
+
+  useEffect(() => {
+    const onChat = () => void refreshRecent();
+    const onInbox = () => void refreshRecent();
+    window.addEventListener("say-hello-chat-updated", onChat);
+    window.addEventListener("say-hello-inbox-refresh", onInbox);
+    return () => {
+      window.removeEventListener("say-hello-chat-updated", onChat);
+      window.removeEventListener("say-hello-inbox-refresh", onInbox);
     };
-    window.addEventListener("say-hello-chat-updated", handler);
-    return () => window.removeEventListener("say-hello-chat-updated", handler);
+  }, [refreshRecent]);
+
+  useEffect(() => {
+    const h = () => setReadTick((x) => x + 1);
+    window.addEventListener("say-hello-read-updated", h);
+    return () => window.removeEventListener("say-hello-read-updated", h);
   }, []);
 
   function active(href: string) {
@@ -87,9 +114,24 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         <Link
           href="/chats"
           onClick={onNavigate}
-          className="truncate text-lg font-semibold tracking-tight text-[var(--tg-accent)]"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--tg-accent)] hover:bg-[var(--tg-hover)]"
+          aria-label={t("nav.brand")}
+          title={t("nav.brand")}
         >
-          Say Hello
+          <svg
+            className="h-7 w-7"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            aria-hidden
+          >
+            <path
+              d="M21 12a8 8 0 01-8 8H9l-5 3v-3a8 8 0 118-8z"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
         </Link>
       </div>
 
@@ -99,7 +141,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             <circle cx="11" cy="11" r="7" />
             <path d="M21 21l-4.35-4.35" strokeLinecap="round" />
           </svg>
-          <span className="select-none">Поиск</span>
+          <span className="select-none">{t("nav.search")}</span>
         </div>
       </div>
 
@@ -111,50 +153,123 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
               key={item.href}
               href={item.href}
               onClick={onNavigate}
-              className={`flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-[15px] transition-colors ${
+              className={`flex items-center gap-3 rounded-[10px] border border-transparent px-3 py-2.5 text-[15px] transition-colors ${
                 isActive
-                  ? "bg-[var(--tg-accent-soft)] text-[var(--tg-accent)]"
-                  : "text-[var(--tg-text)] hover:bg-[var(--tg-hover)]"
+                  ? "border-[var(--tg-border)] bg-[var(--tg-accent-soft)] text-[var(--tg-accent)]"
+                  : "text-[var(--tg-text)] hover:border-[var(--tg-border)] hover:bg-[var(--tg-hover)]"
               }`}
             >
               <span className={isActive ? "text-[var(--tg-accent)]" : "text-[var(--tg-text-secondary)]"}>
                 <Icon name={item.icon} />
               </span>
-              <span className="font-medium">{item.label}</span>
+              <span className="font-medium">{t(item.labelKey)}</span>
             </Link>
           );
         })}
 
-        <div className="my-3 border-t border-[var(--tg-border)] pt-3">
+        <div className="my-3 -mx-2 border-t border-[var(--tg-border)] pt-3">
           <p className="px-3 pb-1 text-[13px] font-medium uppercase tracking-wide text-[var(--tg-text-secondary)]">
-            Диалоги
+            {t("nav.recent")}
           </p>
           {recent.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-[var(--tg-border)] px-3 py-4 text-center text-[12px] leading-snug text-[var(--tg-text-secondary)]">
-              Личные чаты появятся после первого сообщения
+            <div className="mx-2 rounded-lg border border-dashed border-[var(--tg-border)] px-3 py-4 text-center text-[12px] leading-snug text-[var(--tg-text-secondary)]">
+              {t("sidebar.recentEmpty")}
             </div>
           ) : (
-            <ul className="flex flex-col gap-0.5">
-              {recent.map((c) => (
-                <li key={c.peerId}>
-                  <Link
-                    href={`/chats/dm/${c.peerId}`}
-                    onClick={onNavigate}
-                    className={`block rounded-[10px] px-3 py-2 text-left transition-colors ${
-                      pathname === `/chats/dm/${c.peerId}`
-                        ? "bg-[var(--tg-accent-soft)]"
-                        : "hover:bg-[var(--tg-hover)]"
-                    }`}
-                  >
-                    <span className="block truncate text-[14px] font-medium text-[var(--tg-text)]">
-                      {c.displayName || c.shortCode || c.peerId.slice(0, 8)}
-                    </span>
-                    <span className="block truncate text-[12px] text-[var(--tg-text-secondary)]">
-                      {c.preview}
-                    </span>
-                  </Link>
-                </li>
-              ))}
+            <ul className="flex flex-col gap-2 px-2">
+              {recent.map((c) => {
+                if (c.kind === "dm") {
+                  const activeDm = pathname === `/chats/dm/${c.peerId}`;
+                  const online = presence[c.peerId] ?? false;
+                  const unread =
+                    c.lastDirection === "in" &&
+                    c.lastAt > getDmLastReadMs(c.peerId);
+                  return (
+                    <li key={`dm-${c.peerId}`}>
+                      <Link
+                        href={`/chats/dm/${c.peerId}`}
+                        onClick={onNavigate}
+                        className={`relative flex w-full flex-col gap-1 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-main)] px-3 py-2.5 text-left transition hover:bg-[var(--tg-hover)] ${
+                          activeDm ? "ring-1 ring-[var(--tg-accent)]" : ""
+                        }`}
+                      >
+                        {unread && (
+                          <span
+                            className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[var(--tg-accent)]"
+                            aria-hidden
+                          />
+                        )}
+                        <span className="flex w-full items-center justify-between gap-2">
+                          <span className="flex min-w-0 flex-1 items-center gap-2 pr-5">
+                            <OnlineDot online={online} />
+                            <span
+                              className={`truncate text-[15px] text-[var(--tg-text)] ${
+                                unread ? "font-semibold" : "font-medium"
+                              }`}
+                            >
+                              {c.label}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-[12px] text-[var(--tg-text-secondary)]">
+                            {online ? t("sidebar.online") : t("sidebar.offline")}
+                          </span>
+                        </span>
+                        <span className="block truncate pl-4 text-[12px] text-[var(--tg-text-secondary)]">
+                          {obfuscateEnabled ? maskText(c.preview) : c.preview}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                }
+                const href = `/groups/${c.groupId}`;
+                const activeG =
+                  pathname === href || pathname.startsWith(`${href}/`);
+                const unreadG =
+                  !!c.lastMessageAt &&
+                  new Date(c.lastMessageAt).getTime() >
+                    getGroupLastReadMs(c.groupId);
+                return (
+                  <li key={`g-${c.groupId}`}>
+                    <Link
+                      href={href}
+                      onClick={onNavigate}
+                      className={`relative flex w-full flex-col gap-1 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-main)] px-3 py-2.5 text-left transition hover:bg-[var(--tg-hover)] ${
+                        activeG ? "ring-1 ring-[var(--tg-accent)]" : ""
+                      }`}
+                    >
+                      {unreadG && (
+                        <span
+                          className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-[var(--tg-accent)]"
+                          aria-hidden
+                        />
+                      )}
+                      <span className="flex w-full items-center justify-between gap-2">
+                        <span className="flex min-w-0 flex-1 items-center gap-2 pr-5">
+                          <span
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--tg-search-bg)] text-[var(--tg-text-secondary)]"
+                            aria-hidden
+                          >
+                            <Icon name="group" />
+                          </span>
+                          <span
+                            className={`truncate text-[15px] text-[var(--tg-text)] ${
+                              unreadG ? "font-semibold" : "font-medium"
+                            }`}
+                          >
+                            {c.label}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-[12px] text-[var(--tg-text-secondary)]">
+                          группа
+                        </span>
+                      </span>
+                      <span className="block truncate pl-11 text-[12px] text-[var(--tg-text-secondary)]">
+                        {obfuscateEnabled ? maskText(c.preview) : c.preview}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -167,7 +282,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[14px] font-medium text-[var(--tg-text)]">
-              {session?.user?.name || "Профиль"}
+              {session?.user?.name || t("sidebar.profileFallback")}
             </p>
             <p className="truncate text-[12px] text-[var(--tg-text-secondary)]">
               {session?.user?.email}
@@ -177,9 +292,9 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             type="button"
             onClick={() => signOut({ callbackUrl: "/" })}
             className="shrink-0 rounded-md px-2 py-1.5 text-[13px] text-[var(--tg-text-secondary)] transition hover:bg-[var(--tg-hover)] hover:text-[var(--tg-text)]"
-            title="Выйти"
+            title={t("common.logout")}
           >
-            Выйти
+            {t("common.logout")}
           </button>
         </div>
       </div>

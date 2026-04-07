@@ -49,3 +49,31 @@ export async function GET(_request: Request, context: Ctx) {
     members,
   });
 }
+
+/** Любой администратор группы может удалить её полностью (сообщения и участники — каскадом). */
+export async function DELETE(_request: Request, context: Ctx) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
+  }
+  const { id: groupId } = await context.params;
+  const uid = session.user.id;
+  const [membership] = await db
+    .select({ role: groupMembers.role })
+    .from(groupMembers)
+    .where(
+      and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, uid))
+    )
+    .limit(1);
+  if (!membership) {
+    return NextResponse.json({ error: "Нет доступа" }, { status: 403 });
+  }
+  if (membership.role !== "admin") {
+    return NextResponse.json(
+      { error: "Только администратор может удалить чат" },
+      { status: 403 }
+    );
+  }
+  await db.delete(groups).where(eq(groups.id, groupId));
+  return NextResponse.json({ ok: true });
+}

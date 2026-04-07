@@ -14,6 +14,7 @@ export default {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        passkeyCode: { label: "Passkey code", type: "text" },
       },
       authorize: async (credentials) => {
         const { authorizeCredentials } = await import(

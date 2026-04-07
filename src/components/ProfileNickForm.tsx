@@ -2,12 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { generateRandomNick } from "@/lib/nick-generator";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 
-type Props = { initialDisplayName: string | null };
+type Props = {
+  initialDisplayName: string | null;
+  /** Вызывается после успешного сохранения (например, обновить данные в модалке). */
+  onSaved?: () => void;
+};
 
 /** Опциональный ник — отправляется только если пользователь сам заполнит. */
-export function ProfileNickForm({ initialDisplayName }: Props) {
+export function ProfileNickForm({ initialDisplayName, onSaved }: Props) {
   const router = useRouter();
+  const { locale } = useLocale();
   const [value, setValue] = useState(initialDisplayName ?? "");
   const [status, setStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -27,6 +34,7 @@ export function ProfileNickForm({ initialDisplayName }: Props) {
       return;
     }
     setStatus("Сохранено");
+    onSaved?.();
     router.refresh();
   }
 
@@ -49,7 +57,14 @@ export function ProfileNickForm({ initialDisplayName }: Props) {
         placeholder="Ник или имя"
         className="mt-3 w-full rounded-lg border border-[var(--tg-border)] bg-white px-3 py-2 text-[14px] outline-none focus:ring-2 focus:ring-[var(--tg-accent)]"
       />
-      <div className="mt-3 flex items-center gap-3">
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setValue(generateRandomNick(locale))}
+          className="rounded-lg border border-[var(--tg-border)] px-4 py-2 text-[13px] font-medium text-[var(--tg-text)] hover:bg-[var(--tg-hover)]"
+        >
+          Сгенерировать ник
+        </button>
         <button
           type="submit"
           disabled={loading}

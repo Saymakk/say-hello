@@ -2,18 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 
 type Tab = {
   href: string;
-  label: string;
+  labelKey: string;
   icon: "chat" | "group" | "contact" | "settings";
 };
 
 const tabs: Tab[] = [
-  { href: "/chats", label: "Чаты", icon: "chat" },
-  { href: "/groups", label: "Группы", icon: "group" },
-  { href: "/add", label: "Контакты", icon: "contact" },
-  { href: "/settings", label: "Профиль", icon: "settings" },
+  { href: "/chats", labelKey: "nav.chats", icon: "chat" },
+  { href: "/groups", labelKey: "nav.groups", icon: "group" },
+  { href: "/add", labelKey: "nav.contacts", icon: "contact" },
+  { href: "/settings", labelKey: "nav.profileTab", icon: "settings" },
 ];
 
 function TabIcon({ name, active }: { name: Tab["icon"]; active: boolean }) {
@@ -60,6 +61,7 @@ function isActive(pathname: string | null, href: string) {
 
 /** Нижняя навигация как в нативных приложениях (только &lt; md). */
 export function BottomTabBar() {
+  const { t } = useLocale();
   const pathname = usePathname();
 
   return (
@@ -87,7 +89,7 @@ export function BottomTabBar() {
                     active ? "text-[var(--tg-accent)]" : "text-[var(--tg-text-secondary)]"
                   }`}
                 >
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </span>
               </Link>
             </li>

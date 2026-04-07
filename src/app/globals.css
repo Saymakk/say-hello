@@ -46,3 +46,14 @@ body {
   background: rgba(0, 0, 0, 0.15);
   border-radius: 3px;
 }
+
+/* Десктоп: плотнее контент, без «растекания» по ширине */
+@media (min-width: 768px) {
+  .app-main-tight .chat-panel-shell {
+    max-width: 34rem;
+  }
+
+  .app-main-tight .settings-stack-tight > * + * {
+    margin-top: 1rem;
+  }
+}

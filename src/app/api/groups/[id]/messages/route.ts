@@ -5,9 +5,14 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { groupMembers, groupMessages, users } from "@/db/schema";
 
-const postSchema = z.object({
-  text: z.string().min(1).max(8000),
-});
+const postSchema = z.union([
+  z.object({ text: z.string().min(1).max(8000) }),
+  z.object({
+    caption: z.string().max(2000).optional(),
+    imageBase64: z.string().min(1).max(520_000),
+    imageMime: z.enum(["image/jpeg", "image/png", "image/webp", "image/gif"]),
+  }),
+]);
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -35,7 +40,9 @@ export async function GET(request: Request, context: Ctx) {
     .select({
       id: groupMessages.id,
       body: groupMessages.body,
+      imageDataUrl: groupMessages.imageDataUrl,
       createdAt: groupMessages.createdAt,
+      editedAt: groupMessages.editedAt,
       userId: groupMessages.userId,
       shortCode: users.shortCode,
       displayName: users.displayName,
@@ -86,17 +93,37 @@ export async function POST(request: Request, context: Ctx) {
       { status: 400 }
     );
   }
-  const [row] = await db
-    .insert(groupMessages)
-    .values({
-      groupId,
-      userId: uid,
-      body: parsed.data.text.trim(),
-    })
-    .returning({
-      id: groupMessages.id,
-      body: groupMessages.body,
-      createdAt: groupMessages.createdAt,
-    });
+  const data = parsed.data;
+  const [row] =
+    "text" in data
+      ? await db
+          .insert(groupMessages)
+          .values({
+            groupId,
+            userId: uid,
+            body: data.text.trim(),
+          })
+          .returning({
+            id: groupMessages.id,
+            body: groupMessages.body,
+            imageDataUrl: groupMessages.imageDataUrl,
+            createdAt: groupMessages.createdAt,
+            editedAt: groupMessages.editedAt,
+          })
+      : await db
+          .insert(groupMessages)
+          .values({
+            groupId,
+            userId: uid,
+            body: (data.caption ?? "").trim() || " ",
+            imageDataUrl: `data:${data.imageMime};base64,${data.imageBase64}`,
+          })
+          .returning({
+            id: groupMessages.id,
+            body: groupMessages.body,
+            imageDataUrl: groupMessages.imageDataUrl,
+            createdAt: groupMessages.createdAt,
+            editedAt: groupMessages.editedAt,
+          });
   return NextResponse.json(row);
 }

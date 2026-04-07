@@ -11,5 +11,9 @@ export default async function DmChatPage({ params }: Props) {
   if (!UUID_RE.test(peerId)) {
     notFound();
   }
-  return <DmChatView peerId={peerId} />;
+  return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <DmChatView peerId={peerId} />
+    </div>
+  );
 }

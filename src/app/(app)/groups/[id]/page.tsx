@@ -1,10 +1,7 @@
-import Link from "next/link";
 import { and, eq } from "drizzle-orm";
 import { redirect, notFound } from "next/navigation";
 import { auth } from "@/auth";
-import { AddMemberForm } from "@/components/AddMemberForm";
-import { GroupChatPanel } from "@/components/chat/GroupChatPanel";
-import { MainHeader } from "@/components/telegram/MainHeader";
+import { GroupDetailClient } from "@/components/groups/GroupDetailClient";
 import { db } from "@/db";
 import { groupMembers, groups, users } from "@/db/schema";
 
@@ -47,53 +44,14 @@ export default async function GroupDetailPage({ params }: Props) {
     .where(eq(groupMembers.groupId, groupId));
 
   return (
-    <>
-      <MainHeader
-        title={g.name}
-        subtitle={
-          membership.role === "admin"
-            ? "Вы — администратор"
-            : "Вы — участник"
-        }
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <GroupDetailClient
+        groupId={groupId}
+        groupName={g.name}
+        isAdmin={membership.role === "admin"}
+        currentUserId={uid}
+        members={members}
       />
-      <div className="tg-scroll flex-1 overflow-y-auto px-4 py-4">
-        <Link
-          href="/groups"
-          className="mb-4 inline-block text-[14px] text-[var(--tg-accent)] hover:underline"
-        >
-          ← Все группы
-        </Link>
-        {membership.role === "admin" && <AddMemberForm groupId={groupId} />}
-        <div className="mt-6">
-          <GroupChatPanel groupId={groupId} />
-        </div>
-        <section className="mt-8">
-          <h2 className="mb-2 text-[13px] font-medium uppercase tracking-wide text-[var(--tg-text-secondary)]">
-            Участники
-          </h2>
-          <ul className="rounded-xl border border-[var(--tg-border)]">
-            {members.map((m) => (
-              <li
-                key={m.userId}
-                className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--tg-border)] px-3 py-3 text-[14px] last:border-0"
-              >
-                <span className="font-mono text-[13px]">{m.shortCode}</span>
-                <span className="text-right text-[13px] text-[var(--tg-text-secondary)]">
-                  {m.displayName ?? "—"} · {m.role === "admin" ? "админ" : "участник"}
-                </span>
-                {m.userId !== uid && (
-                  <Link
-                    href={`/chats/dm/${m.userId}`}
-                    className="w-full text-[13px] text-[var(--tg-accent)] hover:underline sm:w-auto"
-                  >
-                    Личный чат →
-                  </Link>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
-    </>
+    </div>
   );
 }

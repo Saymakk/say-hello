@@ -1,11 +1,10 @@
-import Link from "next/link";
-import { eq } from "drizzle-orm";
+import { eq, inArray, max } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { CreateGroupForm } from "@/components/CreateGroupForm";
+import { GroupsPageClient } from "@/components/groups/GroupsPageClient";
 import { MainHeader } from "@/components/telegram/MainHeader";
 import { db } from "@/db";
-import { groupMembers, groups } from "@/db/schema";
+import { groupMembers, groupMessages, groups } from "@/db/schema";
 
 export default async function GroupsPage() {
   const session = await auth();
@@ -24,32 +23,38 @@ export default async function GroupsPage() {
     .innerJoin(groups, eq(groupMembers.groupId, groups.id))
     .where(eq(groupMembers.userId, uid));
 
+  const ids = list.map((g) => g.id);
+  let lastMap = new Map<string, Date | null>();
+  if (ids.length > 0) {
+    const lasts = await db
+      .select({
+        groupId: groupMessages.groupId,
+        lastAt: max(groupMessages.createdAt),
+      })
+      .from(groupMessages)
+      .where(inArray(groupMessages.groupId, ids))
+      .groupBy(groupMessages.groupId);
+    lastMap = new Map(lasts.map((x) => [x.groupId, x.lastAt]));
+  }
+
+  const serializable = list
+    .map((g) => ({
+      id: g.id,
+      name: g.name,
+      role: g.role,
+      lastMessageAt: lastMap.get(g.id)?.toISOString() ?? null,
+    }))
+    .sort((a, b) => {
+      const ta = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+      const tb = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+      if (tb !== ta) return tb - ta;
+      return a.name.localeCompare(b.name, "ru");
+    });
+
   return (
     <>
-      <MainHeader title="Группы" subtitle="Создавайте и добавляйте по коду" />
-      <div className="tg-scroll flex-1 overflow-y-auto px-4 py-4">
-        <CreateGroupForm />
-        <ul className="mt-4 flex flex-col gap-0">
-          {list.length === 0 && (
-            <li className="rounded-xl border border-dashed border-[var(--tg-border)] px-4 py-8 text-center text-[14px] text-[var(--tg-text-secondary)]">
-              Пока нет групп
-            </li>
-          )}
-          {list.map((g) => (
-            <li key={g.id} className="border-b border-[var(--tg-border)] last:border-0">
-              <Link
-                href={`/groups/${g.id}`}
-                className="flex items-center justify-between gap-3 py-3.5 transition hover:bg-[var(--tg-hover)]"
-              >
-                <span className="text-[15px] font-medium text-[var(--tg-text)]">{g.name}</span>
-                <span className="shrink-0 text-[13px] text-[var(--tg-text-secondary)]">
-                  {g.role === "admin" ? "админ" : "участник"}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <MainHeader title="Группы" subtitle="Чат и участники — внутри группы" />
+      <GroupsPageClient groups={serializable} />
     </>
   );
 }
