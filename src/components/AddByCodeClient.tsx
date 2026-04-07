@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { upsertContact } from "@/lib/chat/local-db";
 
 type Lookup = {
   id: string;
@@ -68,14 +67,6 @@ export function AddByCodeClient({ initialCode }: { initialCode: string }) {
           <div className="mt-4 flex flex-wrap gap-2">
             <Link
               href={`/chats/dm/${result.id}`}
-              onClick={() => {
-                void upsertContact({
-                  peerId: result.id,
-                  shortCode: result.shortCode,
-                  displayName: result.displayName,
-                  updatedAt: Date.now(),
-                });
-              }}
               className="inline-flex rounded-lg bg-[var(--tg-accent)] px-4 py-2 text-[14px] font-medium text-white hover:opacity-90"
             >
               Написать
