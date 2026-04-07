@@ -8,6 +8,13 @@
       "when": 1775519109331,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775531188528,
+      "tag": "0001_group_messages",
+      "breakpoints": true
     }
   ]
 }

@@ -33,12 +33,12 @@ export function ProfileNickForm({ initialDisplayName }: Props) {
   return (
     <form
       onSubmit={save}
-      className="mt-8 rounded-2xl bg-[var(--card)] p-6 shadow-sm ring-1 ring-[var(--ring)]"
+      className="mt-6 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-5"
     >
-      <h2 className="text-sm font-medium text-[var(--foreground)]">
+      <h2 className="text-[14px] font-medium text-[var(--tg-text)]">
         Как вас показывать другим
       </h2>
-      <p className="mt-1 text-xs text-[var(--muted)]">
+      <p className="mt-1 text-[12px] text-[var(--tg-text-secondary)]">
         Необязательно. Можно оставить пустым для большей анонимности.
       </p>
       <input
@@ -47,17 +47,19 @@ export function ProfileNickForm({ initialDisplayName }: Props) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="Ник или имя"
-        className="mt-3 w-full rounded-xl border border-[var(--input-border)] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
+        className="mt-3 w-full rounded-lg border border-[var(--tg-border)] bg-white px-3 py-2 text-[14px] outline-none focus:ring-2 focus:ring-[var(--tg-accent)]"
       />
       <div className="mt-3 flex items-center gap-3">
         <button
           type="submit"
           disabled={loading}
-          className="rounded-full bg-[var(--accent)] px-4 py-2 text-xs font-medium text-[var(--accent-foreground)] disabled:opacity-50"
+          className="rounded-lg bg-[var(--tg-accent)] px-4 py-2 text-[13px] font-medium text-white disabled:opacity-50"
         >
           {loading ? "…" : "Сохранить"}
         </button>
-        {status && <span className="text-xs text-[var(--muted)]">{status}</span>}
+        {status && (
+          <span className="text-[12px] text-[var(--tg-text-secondary)]">{status}</span>
+        )}
       </div>
     </form>
   );

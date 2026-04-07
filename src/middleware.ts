@@ -1,17 +1,18 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-/**
- * Защищает личный кабинет, группы и страницу «добавить по коду».
- * Не залогиненных с /add уводим на логин с return URL (удобно после скана QR).
- */
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isAuthed = !!req.auth;
 
+  if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) {
+    return NextResponse.redirect(new URL("/settings", req.url));
+  }
+
   if (
     !isAuthed &&
-    (pathname.startsWith("/dashboard") ||
+    (pathname.startsWith("/chats") ||
+      pathname.startsWith("/settings") ||
       pathname.startsWith("/groups") ||
       pathname.startsWith("/add"))
   ) {
@@ -24,7 +25,7 @@ export default auth((req) => {
   }
 
   if (isAuthed && (pathname === "/login" || pathname === "/register")) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+    return NextResponse.redirect(new URL("/chats", req.url));
   }
 
   return NextResponse.next();
@@ -32,10 +33,11 @@ export default auth((req) => {
 
 export const config = {
   matcher: [
-    "/dashboard/:path*",
-    "/groups",
+    "/chats/:path*",
+    "/settings/:path*",
     "/groups/:path*",
-    "/add",
+    "/add/:path*",
+    "/dashboard/:path*",
     "/login",
     "/register",
   ],

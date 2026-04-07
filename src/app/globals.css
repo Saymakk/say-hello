@@ -1,14 +1,27 @@
 @import "tailwindcss";
 
+/* Светлая тема в духе Telegram Web: боковая панель, акцентный синий, нейтральные фоны */
 :root {
-  --background: #faf8f6;
-  --foreground: #3d3835;
-  --muted: #7a716b;
-  --accent: #c4a69d;
-  --accent-foreground: #3d2f2a;
-  --card: #ffffff;
-  --ring: rgba(61, 56, 53, 0.12);
-  --input-border: rgba(61, 56, 53, 0.18);
+  --tg-bg: #e6ebee;
+  --tg-sidebar: #ffffff;
+  --tg-header: #ffffff;
+  --tg-main: #ffffff;
+  --tg-text: #000000;
+  --tg-text-secondary: #707579;
+  --tg-border: #dfe1e5;
+  --tg-accent: #3390ec;
+  --tg-accent-hover: #2a7fd4;
+  --tg-accent-soft: #e5f3ff;
+  --tg-hover: #f4f4f5;
+  --tg-search-bg: #f1f1f2;
+  --ring: rgba(0, 0, 0, 0.06);
+  --background: var(--tg-bg);
+  --foreground: var(--tg-text);
+  --muted: var(--tg-text-secondary);
+  --card: var(--tg-main);
+  --accent: var(--tg-accent);
+  --accent-foreground: #ffffff;
+  --input-border: var(--tg-border);
 }
 
 @theme inline {
@@ -19,7 +32,17 @@
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: var(--tg-bg);
+  color: var(--tg-text);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+}
+
+/* Скроллбар ближе к Telegram (тонкий) */
+.tg-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.tg-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
 }

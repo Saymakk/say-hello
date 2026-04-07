@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { upsertContact } from "@/lib/chat/local-db";
 
 type Lookup = {
   id: string;
@@ -32,19 +34,19 @@ export function AddByCodeClient({ initialCode }: { initialCode: string }) {
   }
 
   return (
-    <div className="mt-6">
+    <div className="mt-2">
       <form onSubmit={lookup} className="flex flex-col gap-3 sm:flex-row">
         <input
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
           placeholder="Код"
-          className="flex-1 rounded-xl border border-[var(--input-border)] bg-white px-3 py-2 font-mono text-sm tracking-wider outline-none focus:ring-2 focus:ring-[var(--accent)]"
+          className="flex-1 rounded-lg border border-[var(--tg-border)] bg-white px-3 py-2 font-mono text-[14px] tracking-wider outline-none focus:ring-2 focus:ring-[var(--tg-accent)]"
           maxLength={16}
         />
         <button
           type="submit"
           disabled={loading || code.length < 4}
-          className="rounded-full bg-[var(--accent)] px-6 py-2 text-sm font-medium text-[var(--accent-foreground)] disabled:opacity-50"
+          className="rounded-lg bg-[var(--tg-accent)] px-6 py-2 text-[14px] font-medium text-white disabled:opacity-50"
         >
           {loading ? "…" : "Найти"}
         </button>
@@ -55,18 +57,30 @@ export function AddByCodeClient({ initialCode }: { initialCode: string }) {
         </p>
       )}
       {result && (
-        <div className="mt-6 rounded-2xl bg-[var(--card)] p-5 shadow-sm ring-1 ring-[var(--ring)]">
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+        <div className="mt-6 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-4">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--tg-text-secondary)]">
             Найден пользователь
           </p>
-          <p className="mt-2 font-mono text-lg">{result.shortCode}</p>
+          <p className="mt-2 font-mono text-lg text-[var(--tg-text)]">{result.shortCode}</p>
           {result.displayName && (
-            <p className="mt-1 text-sm text-[var(--foreground)]">{result.displayName}</p>
+            <p className="mt-1 text-[14px] text-[var(--tg-text)]">{result.displayName}</p>
           )}
-          <p className="mt-3 text-xs text-[var(--muted)]">
-            Внутренний ID (для P2P позже):{" "}
-            <span className="break-all font-mono">{result.id}</span>
-          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href={`/chats/dm/${result.id}`}
+              onClick={() => {
+                void upsertContact({
+                  peerId: result.id,
+                  shortCode: result.shortCode,
+                  displayName: result.displayName,
+                  updatedAt: Date.now(),
+                });
+              }}
+              className="inline-flex rounded-lg bg-[var(--tg-accent)] px-4 py-2 text-[14px] font-medium text-white hover:opacity-90"
+            >
+              Написать
+            </Link>
+          </div>
         </div>
       )}
     </div>

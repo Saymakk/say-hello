@@ -32,9 +32,9 @@ export function CreateGroupForm() {
   return (
     <form
       onSubmit={createGroup}
-      className="mt-6 rounded-2xl bg-[var(--card)] p-5 shadow-sm ring-1 ring-[var(--ring)]"
+      className="rounded-xl border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-4"
     >
-      <h2 className="text-sm font-medium text-[var(--foreground)]">Новая группа</h2>
+      <h2 className="text-[14px] font-medium text-[var(--tg-text)]">Новая группа</h2>
       <div className="mt-3 flex flex-col gap-2 sm:flex-row">
         <input
           value={name}
@@ -42,12 +42,12 @@ export function CreateGroupForm() {
           placeholder="Название"
           required
           maxLength={80}
-          className="flex-1 rounded-xl border border-[var(--input-border)] bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[var(--accent)]"
+          className="flex-1 rounded-lg border border-[var(--tg-border)] bg-white px-3 py-2 text-[14px] outline-none focus:ring-2 focus:ring-[var(--tg-accent)]"
         />
         <button
           type="submit"
           disabled={loading || !name.trim()}
-          className="rounded-full bg-[var(--accent)] px-5 py-2 text-sm font-medium text-[var(--accent-foreground)] disabled:opacity-50"
+          className="rounded-lg bg-[var(--tg-accent)] px-5 py-2 text-[14px] font-medium text-white disabled:opacity-50"
         >
           {loading ? "…" : "Создать"}
         </button>

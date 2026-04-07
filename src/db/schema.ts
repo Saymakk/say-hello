@@ -36,6 +36,25 @@ export const groups = pgTable("groups", {
     .notNull(),
 });
 
+/** Сообщения в группах хранятся на сервере (доставка всем участникам). Текст без E2E в MVP. */
+export const groupMessages = pgTable(
+  "group_messages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("group_messages_group_created_idx").on(t.groupId, t.createdAt)]
+);
+
 export const groupMembers = pgTable(
   "group_members",
   {
