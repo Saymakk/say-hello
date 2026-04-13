@@ -4,14 +4,15 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { groupMembers, users } from "@/db/schema";
+import { isValidPhone, normalizePhone } from "@/lib/phone";
 
 const bodySchema = z.object({
-  shortCode: z.string().min(4).max(16),
+  phone: z.string().min(5).max(32),
 });
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** Добавление участника по короткому коду (только admin). */
+/** Добавление участника по номеру телефона (только admin). */
 export async function POST(request: Request, context: Ctx) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -42,14 +43,17 @@ export async function POST(request: Request, context: Ctx) {
       { status: 400 }
     );
   }
-  const code = parsed.data.shortCode.trim().toUpperCase();
+  const phone = normalizePhone(parsed.data.phone);
+  if (!isValidPhone(phone)) {
+    return NextResponse.json({ error: "Некорректный номер телефона" }, { status: 400 });
+  }
   const [target] = await db
     .select({ id: users.id })
     .from(users)
-    .where(sql`upper(${users.shortCode}) = ${code}`)
+    .where(sql`${users.phone} = ${phone}`)
     .limit(1);
   if (!target) {
-    return NextResponse.json({ error: "Код не найден" }, { status: 404 });
+    return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 });
   }
   if (target.id === uid) {
     return NextResponse.json({ error: "Вы уже в группе" }, { status: 400 });

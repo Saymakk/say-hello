@@ -7,9 +7,7 @@ import {
   hasAllowedPair,
   hasBlockBetween,
 } from "@/lib/server/dm-access";
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+import { isValidPhone, normalizePhone } from "@/lib/phone";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -18,8 +16,8 @@ export async function GET(request: Request) {
   }
   const me = session.user.id;
   const { searchParams } = new URL(request.url);
-  const peerId = searchParams.get("peerId")?.trim() ?? "";
-  if (!UUID_RE.test(peerId)) {
+  const peerId = normalizePhone(searchParams.get("peerId")?.trim() ?? "");
+  if (!isValidPhone(peerId)) {
     return NextResponse.json({ error: "Некорректный peerId" }, { status: 400 });
   }
   if (peerId === me) {

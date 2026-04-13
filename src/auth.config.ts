@@ -12,7 +12,7 @@ export default {
     Credentials({
       name: "credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        phone: { label: "Phone", type: "text" },
         password: { label: "Password", type: "password" },
         passkeyCode: { label: "Passkey code", type: "text" },
       },

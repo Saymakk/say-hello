@@ -5,9 +5,10 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { dmRequests, signalPackets, users } from "@/db/schema";
 import { hasAllowedPair, hasBlockBetween } from "@/lib/server/dm-access";
+import { isValidPhone, normalizePhone } from "@/lib/phone";
 
 const postSchema = z.object({
-  toUserId: z.string().uuid(),
+  toUserId: z.string().min(5),
   firstMessagePreview: z.string().max(400).optional(),
 });
 
@@ -33,7 +34,11 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  const { toUserId, firstMessagePreview } = parsed.data;
+  const toUserId = normalizePhone(parsed.data.toUserId);
+  if (!isValidPhone(toUserId)) {
+    return NextResponse.json({ error: "Некорректный номер получателя" }, { status: 400 });
+  }
+  const { firstMessagePreview } = parsed.data;
   if (toUserId === uid) {
     return NextResponse.json({ error: "Нельзя" }, { status: 400 });
   }

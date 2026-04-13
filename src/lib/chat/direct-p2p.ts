@@ -8,8 +8,8 @@ type SignalPayload =
 export type DmReplyWire = { id: string; s: string };
 
 export type DmWirePayload =
-  | { v: 1; t: "text"; b: string; r?: DmReplyWire }
-  | { v: 1; t: "img"; b: string; r?: DmReplyWire };
+  | { v: 1; i: string; t: "text"; b: string; r?: DmReplyWire }
+  | { v: 1; i: string; t: "img"; b: string; r?: DmReplyWire };
 
 export type DmIncomingPayload = DmWirePayload | { legacyText: string };
 
@@ -100,7 +100,8 @@ export class DirectP2P {
           (j as { t?: string }).t === "text" &&
           typeof (j as { b?: string }).b === "string"
         ) {
-          const jo = j as { b: string; r?: { id?: string; s?: string } };
+          const jo = j as { i?: string; b: string; r?: { id?: string; s?: string } };
+          if (typeof jo.i !== "string") return;
           const r =
             jo.r &&
             typeof jo.r.id === "string" &&
@@ -109,8 +110,8 @@ export class DirectP2P {
               : undefined;
           this.onPayload(
             r
-              ? { v: 1, t: "text", b: jo.b, r }
-              : { v: 1, t: "text", b: jo.b }
+              ? { v: 1, i: jo.i, t: "text", b: jo.b, r }
+              : { v: 1, i: jo.i, t: "text", b: jo.b }
           );
           return;
         }
@@ -121,7 +122,8 @@ export class DirectP2P {
           (j as { t?: string }).t === "img" &&
           typeof (j as { b?: string }).b === "string"
         ) {
-          const jo = j as { b: string; r?: { id?: string; s?: string } };
+          const jo = j as { i?: string; b: string; r?: { id?: string; s?: string } };
+          if (typeof jo.i !== "string") return;
           const r =
             jo.r &&
             typeof jo.r.id === "string" &&
@@ -130,8 +132,8 @@ export class DirectP2P {
               : undefined;
           this.onPayload(
             r
-              ? { v: 1, t: "img", b: jo.b, r }
-              : { v: 1, t: "img", b: jo.b }
+              ? { v: 1, i: jo.i, t: "img", b: jo.b, r }
+              : { v: 1, i: jo.i, t: "img", b: jo.b }
           );
           return;
         }
@@ -181,17 +183,17 @@ export class DirectP2P {
     }
   }
 
-  sendText(text: string, reply?: DmReplyWire) {
+  sendText(msgId: string, text: string, reply?: DmReplyWire) {
     if (this.dc?.readyState === "open") {
-      const o: Record<string, unknown> = { v: 1, t: "text", b: text };
+      const o: Record<string, unknown> = { v: 1, i: msgId, t: "text", b: text };
       if (reply) o.r = { id: reply.id, s: reply.s };
       this.dc.send(JSON.stringify(o));
     }
   }
 
-  sendImageDataUrl(dataUrl: string, reply?: DmReplyWire) {
+  sendImageDataUrl(msgId: string, dataUrl: string, reply?: DmReplyWire) {
     if (this.dc?.readyState === "open") {
-      const o: Record<string, unknown> = { v: 1, t: "img", b: dataUrl };
+      const o: Record<string, unknown> = { v: 1, i: msgId, t: "img", b: dataUrl };
       if (reply) o.r = { id: reply.id, s: reply.s };
       this.dc.send(JSON.stringify(o));
     }

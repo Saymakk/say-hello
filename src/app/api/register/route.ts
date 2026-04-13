@@ -5,13 +5,14 @@ import { z } from "zod";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { randomShortCode } from "@/lib/short-code";
+import { isValidPhone, normalizePhone } from "@/lib/phone";
 
 const bodySchema = z.object({
-  email: z.string().email(),
+  phone: z.string().min(5),
   password: z.string().min(8, "Пароль не короче 8 символов"),
 });
 
-/** Регистрация: создаёт пользователя с уникальным short_code (повтор при коллизии). */
+/** Регистрация: user id = phone (digits-only) + пароль + short_code. */
 export async function POST(request: Request) {
   let json: unknown;
   try {
@@ -26,15 +27,21 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  const email = parsed.data.email.toLowerCase().trim();
+  const phone = normalizePhone(parsed.data.phone);
+  if (!isValidPhone(phone)) {
+    return NextResponse.json(
+      { error: "Номер телефона должен содержать 10-15 цифр" },
+      { status: 400 }
+    );
+  }
   const existing = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.email, email))
+    .where(eq(users.phone, phone))
     .limit(1);
   if (existing.length > 0) {
     return NextResponse.json(
-      { error: "Этот email уже зарегистрирован" },
+      { error: "Этот номер уже зарегистрирован" },
       { status: 409 }
     );
   }
@@ -44,7 +51,7 @@ export async function POST(request: Request) {
     try {
       const [inserted] = await db
         .insert(users)
-        .values({ email, passwordHash, shortCode })
+        .values({ id: phone, phone, passwordHash, shortCode })
         .returning({ id: users.id, shortCode: users.shortCode });
       return NextResponse.json({
         ok: true,

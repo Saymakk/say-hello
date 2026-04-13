@@ -5,18 +5,18 @@ import { useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 
 type Props = {
-  shortCode: string;
+  phone: string;
   addUrl: string;
 };
 
 /** QR и текст кода для обмена контактами (без email в QR — только ссылка на /add). */
-export function ShareIdentity({ shortCode, addUrl }: Props) {
+export function ShareIdentity({ phone, addUrl }: Props) {
   const { t } = useLocale();
   const [shareHint, setShareHint] = useState<string | null>(null);
 
   async function shareContact() {
     setShareHint(null);
-    const text = `${t("share.yourCode")}: ${shortCode}\n${addUrl}`;
+    const text = `Телефон: ${phone}\n${addUrl}`;
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({
@@ -43,9 +43,9 @@ export function ShareIdentity({ shortCode, addUrl }: Props) {
         <QRCode value={addUrl} size={160} level="M" />
       </div>
       <div className="max-w-sm text-center sm:text-left">
-        <p className="text-[13px] font-medium text-[var(--tg-text-secondary)]">{t("share.yourCode")}</p>
+        <p className="text-[13px] font-medium text-[var(--tg-text-secondary)]">Ваш номер</p>
         <p className="mt-1 font-mono text-2xl font-semibold tracking-widest text-[var(--tg-text)]">
-          {shortCode}
+          {phone}
         </p>
         <p className="mt-2 text-[12px] leading-snug text-[var(--tg-text-secondary)]">
           {t("share.qrHint")}

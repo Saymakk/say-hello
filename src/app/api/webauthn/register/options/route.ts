@@ -37,8 +37,8 @@ export async function POST(req: Request) {
     rpName: webAuthnRpName(),
     rpID,
     userID: user.id,
-    userName: user.email,
-    userDisplayName: user.displayName ?? user.email,
+    userName: user.phone,
+    userDisplayName: user.displayName ?? user.phone,
     excludeCredentials: existing.map((c) => ({
       id: isoBase64URL.toBuffer(c.credentialId),
       type: "public-key" as const,
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
   await db.insert(webauthnChallenges).values({
     userId: user.id,
-    email: user.email,
+    phone: user.phone,
     challenge: options.challenge,
     kind: "registration",
     expiresAt: new Date(Date.now() + 5 * 60 * 1000),

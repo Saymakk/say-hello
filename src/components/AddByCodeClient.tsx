@@ -8,6 +8,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 
 type Lookup = {
   id: string;
+  phone: string;
   shortCode: string;
   displayName: string | null;
 };
@@ -35,7 +36,7 @@ export function AddByCodeClient({ initialCode }: { initialCode: string }) {
     setResult(null);
     setLoading(true);
     const res = await fetch(
-      `/api/users/lookup?code=${encodeURIComponent(code.trim())}`
+      `/api/users/lookup?phone=${encodeURIComponent(code.trim())}`
     );
     const data = await res.json().catch(() => ({}));
     setLoading(false);
@@ -47,7 +48,7 @@ export function AddByCodeClient({ initialCode }: { initialCode: string }) {
     setResult(r);
     await upsertContact({
       peerId: r.id,
-      shortCode: r.shortCode,
+      shortCode: r.phone,
       displayName: r.displayName,
       updatedAt: Date.now(),
     });
@@ -58,7 +59,7 @@ export function AddByCodeClient({ initialCode }: { initialCode: string }) {
     if (!result) return;
     await upsertContact({
       peerId: result.id,
-      shortCode: result.shortCode,
+      shortCode: result.phone,
       displayName: result.displayName,
       localAlias: localAlias.trim() || null,
       updatedAt: Date.now(),
@@ -80,14 +81,14 @@ export function AddByCodeClient({ initialCode }: { initialCode: string }) {
       <form onSubmit={lookup} className="flex flex-col gap-3 sm:flex-row">
         <input
           value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder={t("addPage.codePlaceholder")}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="Номер телефона"
           className="flex-1 rounded-lg border border-[var(--tg-border)] bg-white px-3 py-2 font-mono text-[14px] tracking-wider outline-none focus:ring-2 focus:ring-[var(--tg-accent)]"
-          maxLength={16}
+          maxLength={20}
         />
         <button
           type="submit"
-          disabled={loading || code.length < 4}
+          disabled={loading || code.trim().length < 10}
           className="rounded-lg bg-[var(--tg-accent)] px-6 py-2 text-[14px] font-medium text-white disabled:opacity-50"
         >
           {loading ? "…" : t("addPage.find")}
@@ -103,7 +104,7 @@ export function AddByCodeClient({ initialCode }: { initialCode: string }) {
           <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--tg-text-secondary)]">
             {t("addPage.foundUser")}
           </p>
-          <p className="mt-2 font-mono text-lg text-[var(--tg-text)]">{result.shortCode}</p>
+          <p className="mt-2 font-mono text-lg text-[var(--tg-text)]">{result.phone}</p>
           {result.displayName && (
             <p className="mt-1 text-[14px] text-[var(--tg-text)]">{result.displayName}</p>
           )}

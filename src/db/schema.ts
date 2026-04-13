@@ -14,8 +14,9 @@ import {
 export const users = pgTable(
   "users",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
-    email: text("email").notNull().unique(),
+    /** Идентификатор пользователя = номер телефона digits-only (без +). */
+    id: text("id").primaryKey(),
+    phone: text("phone").notNull().unique(),
     passwordHash: text("password_hash").notNull(),
     /** Публичный «ник» для отображения; опционально. */
     displayName: text("display_name"),
@@ -39,7 +40,7 @@ export const users = pgTable(
 export const groups = pgTable("groups", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),
-  createdBy: uuid("created_by")
+  createdBy: text("created_by")
     .notNull()
     .references(() => users.id, { onDelete: "restrict" }),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -55,7 +56,7 @@ export const groupMessages = pgTable(
     groupId: uuid("group_id")
       .notNull()
       .references(() => groups.id, { onDelete: "cascade" }),
-    userId: uuid("user_id")
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     body: text("body").notNull(),
@@ -75,7 +76,7 @@ export const groupMembers = pgTable(
     groupId: uuid("group_id")
       .notNull()
       .references(() => groups.id, { onDelete: "cascade" }),
-    userId: uuid("user_id")
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     role: text("role").notNull().default("member"),
@@ -94,11 +95,11 @@ export const signalPackets = pgTable(
   "signal_packets",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    fromUserId: uuid("from_user_id")
+    fromUserId: text("from_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     /** Личный канал: получатель. */
-    toUserId: uuid("to_user_id").references(() => users.id, {
+    toUserId: text("to_user_id").references(() => users.id, {
       onDelete: "cascade",
     }),
     /** Групповой сигналинг: все участники группы могут читать пакеты по group_id. */
@@ -120,10 +121,10 @@ export const signalPackets = pgTable(
 export const userBlocks = pgTable(
   "user_blocks",
   {
-    blockerId: uuid("blocker_id")
+    blockerId: text("blocker_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    blockedId: uuid("blocked_id")
+    blockedId: text("blocked_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -137,10 +138,10 @@ export const userBlocks = pgTable(
 export const dmAllowedPairs = pgTable(
   "dm_allowed_pairs",
   {
-    userA: uuid("user_a")
+    userA: text("user_a")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    userB: uuid("user_b")
+    userB: text("user_b")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -155,10 +156,10 @@ export const dmRequests = pgTable(
   "dm_requests",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    fromUserId: uuid("from_user_id")
+    fromUserId: text("from_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    toUserId: uuid("to_user_id")
+    toUserId: text("to_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     status: text("status").notNull().default("pending"),
@@ -178,8 +179,8 @@ export const webauthnChallenges = pgTable(
   "webauthn_challenges",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }),
-    email: text("email"),
+    userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+    phone: text("phone"),
     challenge: text("challenge").notNull(),
     kind: text("kind").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
@@ -191,7 +192,7 @@ export const webauthnCredentials = pgTable(
   "webauthn_credentials",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id")
+    userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     credentialId: text("credential_id").notNull().unique(),
@@ -206,7 +207,7 @@ export const webauthnCredentials = pgTable(
 
 export const webauthnLoginCodes = pgTable("webauthn_login_codes", {
   code: text("code").primaryKey(),
-  userId: uuid("user_id")
+  userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),

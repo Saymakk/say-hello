@@ -19,7 +19,7 @@ export async function GET() {
   const [row] = await db
     .select({
       id: users.id,
-      email: users.email,
+      phone: users.phone,
       displayName: users.displayName,
       shortCode: users.shortCode,
       createdAt: users.createdAt,

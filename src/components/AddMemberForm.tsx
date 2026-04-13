@@ -6,7 +6,7 @@ import { listContacts, type ContactRow } from "@/lib/chat/local-db";
 
 export function AddMemberForm({ groupId }: { groupId: string }) {
   const router = useRouter();
-  const [shortCode, setShortCode] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [contacts, setContacts] = useState<ContactRow[]>([]);
@@ -15,14 +15,14 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
     void listContacts().then((rows) => setContacts(rows.slice(0, 30)));
   }, []);
 
-  async function addByCode(e: React.FormEvent) {
+  async function addByPhone(e: React.FormEvent) {
     e.preventDefault();
     setMessage(null);
     setLoading(true);
     const res = await fetch(`/api/groups/${groupId}/members`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shortCode: shortCode.trim() }),
+      body: JSON.stringify({ phone: phone.trim() }),
     });
     const data = await res.json().catch(() => ({}));
     setLoading(false);
@@ -30,7 +30,7 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
       setMessage(typeof data.error === "string" ? data.error : "Ошибка");
       return;
     }
-    setShortCode("");
+    setPhone("");
     setMessage("Участник добавлен");
     router.refresh();
   }
@@ -84,23 +84,23 @@ export function AddMemberForm({ groupId }: { groupId: string }) {
       )}
 
       <form
-        onSubmit={addByCode}
+        onSubmit={addByPhone}
         className="rounded-xl border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-4"
       >
-        <h2 className="text-[14px] font-medium text-[var(--tg-text)]">Добавить по коду</h2>
+        <h2 className="text-[14px] font-medium text-[var(--tg-text)]">Добавить по номеру</h2>
         <p className="mt-1 text-[12px] text-[var(--tg-text-secondary)]">
-          Введите короткий код человека — он получит роль участника.
+          Введите номер телефона человека — он получит роль участника.
         </p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input
-            value={shortCode}
-            onChange={(e) => setShortCode(e.target.value.toUpperCase())}
-            placeholder="Код"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Телефон"
             className="flex-1 rounded-lg border border-[var(--tg-border)] bg-white px-3 py-2 font-mono text-[14px] outline-none focus:ring-2 focus:ring-[var(--tg-accent)]"
           />
           <button
             type="submit"
-            disabled={loading || shortCode.length < 4}
+            disabled={loading || phone.trim().length < 10}
             className="rounded-lg bg-[var(--tg-accent)] px-5 py-2 text-[14px] font-medium text-white disabled:opacity-50"
           >
             {loading ? "…" : "Добавить"}

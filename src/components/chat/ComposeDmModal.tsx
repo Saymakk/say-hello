@@ -8,13 +8,14 @@ import { upsertContact } from "@/lib/chat/local-db";
 
 type Lookup = {
   id: string;
+  phone: string;
   shortCode: string;
   displayName: string | null;
 };
 
 export function ComposeDmModal({ onClose }: { onClose: () => void }) {
   const router = useRouter();
-  const [code, setCode] = useState("");
+  const [phone, setPhone] = useState("");
   const [result, setResult] = useState<Lookup | null>(null);
   const [preview, setPreview] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +27,7 @@ export function ComposeDmModal({ onClose }: { onClose: () => void }) {
     setResult(null);
     setLoading(true);
     const res = await fetch(
-      `/api/users/lookup?code=${encodeURIComponent(code.trim())}`
+      `/api/users/lookup?phone=${encodeURIComponent(phone.trim())}`
     );
     const data = await res.json().catch(() => ({}));
     setLoading(false);
@@ -38,7 +39,7 @@ export function ComposeDmModal({ onClose }: { onClose: () => void }) {
     setResult(r);
     await upsertContact({
       peerId: r.id,
-      shortCode: r.shortCode,
+      shortCode: r.phone || r.shortCode,
       displayName: r.displayName,
       updatedAt: Date.now(),
     });
@@ -98,21 +99,21 @@ export function ComposeDmModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <p className="mt-1 text-[13px] text-[var(--tg-text-secondary)]">
-          Найдите по коду и отправьте запрос на переписку. Собеседник увидит ваши публичные данные и
+          Найдите по номеру и отправьте запрос на переписку. Собеседник увидит ваши публичные данные и
           сможет принять или отклонить.
         </p>
 
         <form onSubmit={lookup} className="mt-4 flex flex-col gap-2 sm:flex-row">
           <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="Код"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Телефон"
             className="min-w-0 flex-1 rounded-lg border border-[var(--tg-border)] bg-white px-3 py-2 font-mono text-[14px] tracking-wider outline-none focus:ring-2 focus:ring-[var(--tg-accent)]"
-            maxLength={16}
+            maxLength={20}
           />
           <button
             type="submit"
-            disabled={loading || code.length < 4}
+            disabled={loading || phone.trim().length < 10}
             className="rounded-lg bg-[var(--tg-accent)] px-5 py-2 text-[14px] font-medium text-white disabled:opacity-50"
           >
             {loading ? "…" : "Найти"}
@@ -127,7 +128,7 @@ export function ComposeDmModal({ onClose }: { onClose: () => void }) {
 
         {result && (
           <div className="mt-4 rounded-xl border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-4">
-            <p className="font-mono text-lg text-[var(--tg-text)]">{result.shortCode}</p>
+            <p className="font-mono text-lg text-[var(--tg-text)]">{result.phone}</p>
             {result.displayName && (
               <p className="mt-1 text-[14px] text-[var(--tg-text)]">{result.displayName}</p>
             )}

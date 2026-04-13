@@ -7,9 +7,10 @@ import { db } from "@/db";
 import { users, webauthnChallenges, webauthnCredentials } from "@/db/schema";
 import { purgeExpiredWebAuthnChallenges } from "@/lib/webauthn/challenges";
 import { getWebAuthnRpId } from "@/lib/webauthn/config";
+import { isValidPhone, normalizePhone } from "@/lib/phone";
 
 const bodySchema = z.object({
-  email: z.string().email(),
+  phone: z.string().min(5),
 });
 
 export async function POST(req: Request) {
@@ -23,14 +24,17 @@ export async function POST(req: Request) {
   }
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Нужен email" }, { status: 400 });
+    return NextResponse.json({ error: "Нужен номер телефона" }, { status: 400 });
   }
 
-  const email = parsed.data.email.toLowerCase().trim();
+  const phone = normalizePhone(parsed.data.phone);
+  if (!isValidPhone(phone)) {
+    return NextResponse.json({ error: "Некорректный номер телефона" }, { status: 400 });
+  }
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.email, email))
+    .where(eq(users.phone, phone))
     .limit(1);
   if (!user) {
     return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 });
@@ -64,12 +68,12 @@ export async function POST(req: Request) {
   await db
     .delete(webauthnChallenges)
     .where(
-      and(eq(webauthnChallenges.email, email), eq(webauthnChallenges.kind, "login"))
+      and(eq(webauthnChallenges.phone, phone), eq(webauthnChallenges.kind, "login"))
     );
 
   await db.insert(webauthnChallenges).values({
     userId: user.id,
-    email,
+    phone,
     challenge: options.challenge,
     kind: "login",
     expiresAt: new Date(Date.now() + 5 * 60 * 1000),

@@ -5,10 +5,11 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { groupMembers, signalPackets } from "@/db/schema";
 import { ensureDmTextAllowed } from "@/lib/server/dm-access";
+import { isValidPhone, normalizePhone } from "@/lib/phone";
 
 const postSchema = z.object({
   /** Личный сигнал */
-  toUserId: z.string().uuid().optional(),
+  toUserId: z.string().min(5).optional(),
   /** Сигналинг внутри группы (все участники читают опросом) */
   groupId: z.string().uuid().optional(),
   payload: z.string().min(1).max(500_000),
@@ -70,7 +71,13 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  const { toUserId, groupId, payload } = parsed.data;
+  let { toUserId, groupId, payload } = parsed.data;
+  if (toUserId) {
+    toUserId = normalizePhone(toUserId);
+    if (!isValidPhone(toUserId)) {
+      return NextResponse.json({ error: "Некорректный toUserId" }, { status: 400 });
+    }
+  }
   if (!toUserId && !groupId) {
     return NextResponse.json(
       { error: "Нужен toUserId или groupId" },

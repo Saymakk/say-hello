@@ -29,7 +29,7 @@ type ModalId =
   | null;
 
 type Props = {
-  shortCode: string;
+  phone: string;
   addUrl: string;
   displayName: string | null;
   messageEditWindowMinutes: number;
@@ -65,7 +65,7 @@ function MenuRow({
 }
 
 export function SettingsMenuClient({
-  shortCode,
+  phone,
   addUrl,
   displayName,
   messageEditWindowMinutes,
@@ -87,7 +87,7 @@ export function SettingsMenuClient({
     <>
       <SettingsIntro />
       <div className="mb-3 rounded-lg border border-[var(--tg-border)] bg-[var(--tg-sidebar)] p-3">
-        <ShareIdentity shortCode={shortCode} addUrl={addUrl} />
+        <ShareIdentity phone={phone} addUrl={addUrl} />
       </div>
 
       <div className="space-y-1.5">

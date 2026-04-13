@@ -224,7 +224,9 @@ export function DmChatView({ peerId }: { peerId: string }) {
           return;
         }
         if (incoming.t === "text") {
-          const id = crypto.randomUUID();
+          const id = incoming.i;
+          if (seenMsgIdsRef.current.has(id)) return;
+          seenMsgIdsRef.current.add(id);
           const r = "r" in incoming && incoming.r ? incoming.r : undefined;
           const row: DmMessageRow = {
             id,
@@ -240,7 +242,9 @@ export function DmChatView({ peerId }: { peerId: string }) {
           return;
         }
         if (incoming.t === "img") {
-          const id = crypto.randomUUID();
+          const id = incoming.i;
+          if (seenMsgIdsRef.current.has(id)) return;
+          seenMsgIdsRef.current.add(id);
           const r = "r" in incoming && incoming.r ? incoming.r : undefined;
           const row: DmMessageRow = {
             id,
@@ -694,6 +698,7 @@ export function DmChatView({ peerId }: { peerId: string }) {
     setText("");
     setReplyTo(null);
     p2pRef.current?.sendText(
+      id,
       t,
       replyMeta ? { id: replyMeta.replyToId, s: replyMeta.replySnippet } : undefined
     );
@@ -749,6 +754,7 @@ export function DmChatView({ peerId }: { peerId: string }) {
     setMessages((m) => [...m, row]);
     setReplyTo(null);
     p2pRef.current?.sendImageDataUrl(
+      id,
       dataUrl,
       replyMeta ? { id: replyMeta.replyToId, s: replyMeta.replySnippet } : undefined
     );

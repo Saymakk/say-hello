@@ -5,9 +5,10 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { dmAllowedPairs, dmRequests, userBlocks } from "@/db/schema";
 import { canonicalPair } from "@/lib/server/dm-access";
+import { isValidPhone, normalizePhone } from "@/lib/phone";
 
 const bodySchema = z.object({
-  peerId: z.string().uuid(),
+  peerId: z.string().min(5),
 });
 
 /** Заблокировать пользователя (он не сможет писать вам; переписка закрывается). */
@@ -27,7 +28,10 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Некорректные данные" }, { status: 400 });
   }
-  const { peerId } = parsed.data;
+  const peerId = normalizePhone(parsed.data.peerId);
+  if (!isValidPhone(peerId)) {
+    return NextResponse.json({ error: "Некорректный номер пользователя" }, { status: 400 });
+  }
   if (peerId === me) {
     return NextResponse.json({ error: "Нельзя" }, { status: 400 });
   }
@@ -75,8 +79,9 @@ export async function DELETE(request: Request) {
   }
   const me = session.user.id;
   const { searchParams } = new URL(request.url);
-  const peerId = searchParams.get("peerId")?.trim();
-  if (!peerId || !z.string().uuid().safeParse(peerId).success) {
+  const peerIdRaw = searchParams.get("peerId")?.trim() ?? "";
+  const peerId = normalizePhone(peerIdRaw);
+  if (!isValidPhone(peerId)) {
     return NextResponse.json({ error: "Некорректный peerId" }, { status: 400 });
   }
 

@@ -14,7 +14,7 @@ export default async function SettingsPage() {
   }
   const [row] = await db
     .select({
-      shortCode: users.shortCode,
+      phone: users.phone,
       displayName: users.displayName,
       messageEditWindowMinutes: users.messageEditWindowMinutes,
     })
@@ -33,14 +33,14 @@ export default async function SettingsPage() {
   const proto = h.get("x-forwarded-proto") ?? "http";
   const base =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? `${proto}://${host}`;
-  const addUrl = `${base}/add?c=${encodeURIComponent(row.shortCode)}`;
+  const addUrl = `${base}/add?p=${encodeURIComponent(row.phone)}`;
 
   return (
     <>
       <MainHeader titleKey="settings.title" subtitleKey="settings.subtitle" />
       <div className="tg-scroll flex-1 overflow-y-auto px-3 py-3 md:px-3 md:py-3">
         <SettingsMenuClient
-          shortCode={row.shortCode}
+          phone={row.phone}
           addUrl={addUrl}
           displayName={row.displayName}
           messageEditWindowMinutes={row.messageEditWindowMinutes}

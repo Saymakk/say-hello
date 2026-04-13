@@ -48,7 +48,7 @@ export function ChatsPageClient() {
               Новый чат
             </h2>
             <p className="mt-1 text-[12px] text-[var(--tg-text-secondary)]">
-              По коду, QR или создайте группу — всё в одном месте.
+              По номеру, QR или создайте группу — всё в одном месте.
             </p>
             <div className="mt-4 flex flex-col gap-2">
               <button
@@ -59,7 +59,7 @@ export function ChatsPageClient() {
                 }}
                 className="rounded-xl bg-[var(--tg-accent)] px-4 py-3 text-left text-[14px] font-medium text-white"
               >
-                Написать по коду
+                Написать по номеру
               </button>
               <button
                 type="button"

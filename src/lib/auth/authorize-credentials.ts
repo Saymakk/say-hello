@@ -3,9 +3,10 @@ import { eq, lt } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
 import { users, webauthnLoginCodes } from "@/db/schema";
+import { isValidPhone, normalizePhone } from "@/lib/phone";
 
 const passwordLogin = z.object({
-  email: z.string().email(),
+  phone: z.string().min(5),
   password: z.string().min(1),
 });
 
@@ -37,25 +38,27 @@ export async function authorizeCredentials(raw: unknown) {
     if (!user) return null;
     return {
       id: user.id,
-      email: user.email,
+      email: user.phone,
       name: user.displayName ?? undefined,
     };
   }
 
   const parsed = passwordLogin.safeParse(raw);
   if (!parsed.success) return null;
-  const { email, password } = parsed.data;
+  const { phone, password } = parsed.data;
+  const normalized = normalizePhone(phone);
+  if (!isValidPhone(normalized)) return null;
   const [row] = await db
     .select()
     .from(users)
-    .where(eq(users.email, email.toLowerCase().trim()))
+    .where(eq(users.phone, normalized))
     .limit(1);
   if (!row) return null;
   const ok = await compare(password, row.passwordHash);
   if (!ok) return null;
   return {
     id: row.id,
-    email: row.email,
+    email: row.phone,
     name: row.displayName ?? undefined,
   };
 }

@@ -73,21 +73,22 @@ export function QrScanModal({ open, onClose }: Props) {
             if (cancelled) return;
             onCloseRef.current();
             const res = await fetch(
-              `/api/users/lookup?code=${encodeURIComponent(code)}`
+              `/api/users/lookup?phone=${encodeURIComponent(code)}`
             );
             const data = (await res.json().catch(() => ({}))) as {
               id?: string;
+              phone?: string;
               shortCode?: string;
               displayName?: string | null;
               error?: string;
             };
             if (!res.ok || !data.id) {
-              router.push(`/add?c=${encodeURIComponent(code)}`);
+              router.push(`/add?p=${encodeURIComponent(code)}`);
               return;
             }
             await upsertContact({
               peerId: data.id,
-              shortCode: data.shortCode ?? code,
+              shortCode: data.phone ?? data.shortCode ?? code,
               displayName: data.displayName ?? null,
               updatedAt: Date.now(),
             });

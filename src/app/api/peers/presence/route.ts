@@ -3,9 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+import { isValidPhone, normalizePhone } from "@/lib/phone";
 
 /** Считаем «онлайн», если last_seen за последние 2 минуты. */
 const ONLINE_MS = 120_000;
@@ -23,8 +21,8 @@ export async function GET(request: Request) {
   const raw = searchParams.get("ids") ?? "";
   const ids = raw
     .split(",")
-    .map((s) => s.trim())
-    .filter((s) => UUID_RE.test(s))
+    .map((s) => normalizePhone(s.trim()))
+    .filter((s) => isValidPhone(s))
     .slice(0, 50);
 
   if (ids.length === 0) {
